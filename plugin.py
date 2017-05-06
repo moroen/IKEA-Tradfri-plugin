@@ -40,12 +40,13 @@ class BasePlugin:
         self.gateway = pytradfri.gateway.Gateway(self.api)
 
         ikea_devices = self.gateway.get_devices()
-
         lights = [dev for dev in ikea_devices if dev.has_light_control]
 
         listOfIkeaIDs = [int(dev.id) for dev in lights]
         listOfDeviceIDs = [int(Devices[aUnit].DeviceID) for aUnit in Devices]
         listOfUnitIds = list(Devices.keys())
+
+        WhiteOptions = {"LevelActions": "||", "LevelNames": "Cold|Normal|Warm", "LevelOffHidden": "false","SelectorStyle": "0"}
 
         if (len(Devices) == 0):
             i=1
@@ -59,6 +60,8 @@ class BasePlugin:
         for aLight in lights:
             if not int(aLight.id) in listOfDeviceIDs:
                 Domoticz.Device(Name=aLight.name, Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=str(aLight.id)).Create()
+                i=i+1
+                Domoticz.Device(Name=aLight.name + " - White Temperature",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=str(aLight.id)).Create()
                 i=i+1
 
         # Remove registered lights no longer found on the gateway
@@ -76,6 +79,8 @@ class BasePlugin:
         #Test
         #Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
 
+
+
     def onStop(self):
         Domoticz.Log("onStop called")
         return True
@@ -88,21 +93,35 @@ class BasePlugin:
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-        Domoticz.Log(Devices[Unit].Name)
+
+        #Domoticz.Log(Devices[Unit].Name + " - Type: "+str(Devices[Unit].Type) + "Subtype: " + str(Devices[Unit].SubType))
+
         targetDevice = self.gateway.get_device(int(Devices[Unit].DeviceID))
 
-        if Command=="On":
-            targetDevice.light_control.set_state(True)
-            currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
-            Domoticz.Log("Current level: " + str(currentLevel))
-            Devices[Unit].Update(nValue=1, sValue=str(currentLevel))
-        if Command=="Off":
-            currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
-            targetDevice.light_control.set_state(False)
-            Devices[Unit].Update(nValue=0, sValue=str(currentLevel))
-        if Command=="Set Level":
-            targetLevel = int(int(Level)*250/100)
-            targetDevice.light_control.set_dimmer(targetLevel)
+        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
+            if Command=="On":
+                targetDevice.light_control.set_state(True)
+                currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
+                Domoticz.Log("Current level: " + str(currentLevel))
+                Devices[Unit].Update(nValue=1, sValue=str(currentLevel))
+            if Command=="Off":
+                currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
+                targetDevice.light_control.set_state(False)
+                Devices[Unit].Update(nValue=0, sValue=str(currentLevel))
+            if Command=="Set Level":
+                targetLevel = int(int(Level)*250/100)
+                targetDevice.light_control.set_dimmer(targetLevel)
+                Devices[Unit].Update(nValue=1, sValue=str(Level))
+
+        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
+            Domoticz.Log("nValue: "+str(Devices[Unit].nValue)+" sValue: "+str(Devices[Unit].sValue))
+            if Level==0:
+                targetDevice.light_control.set_hex_color("f5faf6")
+            if Level==10:
+                targetDevice.light_control.set_hex_color("f1e0b5")
+            if Level==20:
+                targetDevice.light_control.set_hex_color("efd275")
+
             Devices[Unit].Update(nValue=1, sValue=str(Level))
 
 
