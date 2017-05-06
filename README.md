@@ -1,4 +1,4 @@
-A Domoticz plugin for IKEA Trådfri (Tradfri) gateway 
+A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
 <H1>Plugin</H1>
 
@@ -14,6 +14,9 @@ Installation
 4. Copy the directory "pytradfri" from ggravlingen's python library into the plugins directory.
 5. Restart domoticz and enable IKEA-Tradfri from the hardware page
 
+Usage<br>
+Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
+
 <h1>tradfri.py</h1>
 Command-line python-script for working with IKEA-gateway
 
@@ -23,4 +26,3 @@ Requirements
 
 Usage<br>
 ./pytradfri.py --help for options
-

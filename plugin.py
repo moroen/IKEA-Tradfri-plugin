@@ -61,16 +61,24 @@ class BasePlugin:
                 Domoticz.Device(Name=aLight.name, Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=str(aLight.id)).Create()
                 i=i+1
 
-        # Remove registered lighst no longer found on the gateway
+        # Remove registered lights no longer found on the gateway
         for aUnit in listOfUnitIds:
             if not int(Devices[aUnit].DeviceID) in listOfIkeaIDs:
                 Devices[aUnit].Delete()
 
-        # Test
-        # Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
+        # Sync deviceStates
+        for aUnit in Devices:
+            targetDevice = self.gateway.get_device(int(Devices[aUnit].DeviceID))
+            currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
+            state = int(targetDevice.light_control.lights[0].state)
+            Devices[aUnit].Update(nValue=state, sValue=str(currentLevel))
+
+        #Test
+        #Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
 
     def onStop(self):
         Domoticz.Log("onStop called")
+        return True
 
     def onConnect(self, Status, Description):
         Domoticz.Log("onConnect called")
@@ -82,8 +90,6 @@ class BasePlugin:
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         Domoticz.Log(Devices[Unit].Name)
         targetDevice = self.gateway.get_device(int(Devices[Unit].DeviceID))
-
-
 
         if Command=="On":
             targetDevice.light_control.set_state(True)
