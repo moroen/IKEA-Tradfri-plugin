@@ -13,6 +13,9 @@ def SaveConfig(args):
         config.write(configfile)
 
 
+def change_listener(device):
+  print(device.name + " is now " + str(device.light_control.lights[0].state))
+
 config = configparser.ConfigParser()
 
 config["Gateway"] = {"ip": "UNDEF", "key": "UNDEF"}
@@ -82,7 +85,7 @@ if args.command == "list":
         print(aDevice)
 
 if args.command == "test":
-    for aDevice in gateway.get_devices():
-        print (aDevice.id)
-        print (aDevice.name)
-        print (aDevice.device_info.manufacturer)
+    devices = gateway.get_devices()
+    lights = [dev for dev in devices if dev.has_light_control]
+
+    lights[0].observe(change_listener)
