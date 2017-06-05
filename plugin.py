@@ -70,6 +70,26 @@ class BasePlugin:
             if not devID in ikeaIds:
                 Devices[aUnit].Delete()
 
+    def updateDeviceState(self, deviceState):
+        print("DeviceState")
+        print(deviceState)
+
+        for aDev in deviceState:
+            devID = str(aDev["DeviceID"])
+            targetUnit = self.lights[devID]['Unit']
+            nVal = 0
+            sVal = str(int((aDev["Level"]/250)*100))
+            #Domoticz.Log("Current level: " + str(currentLevel))
+
+            if aDev["State"] == True:
+                nVal = 1
+            if aDev["State"] == False:
+                nVal = 0
+
+            Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
+
+
+
     def onStart(self):
         Domoticz.Log("onStart called")
 
@@ -85,7 +105,7 @@ class BasePlugin:
                 self.lights[Devices[aUnit].DeviceID] = {"DeviceID": Devices[aUnit].DeviceID, "Unit": aUnit}
 
         # myConn = Domoticz.Connection(Transport="TCP/IP", Protocol="line", Address=Parameters["Address"], Port=Parameters["Port"])
-        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="line", Address="127.0.0.1", Port="1234")
+        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
         self.CoapAdapter.Connect()
         #myListen = Domoticz.Connection(Transport="TCP/IP", Protocol="JSON", Port=1235)
         #myListen.Listen()
@@ -158,6 +178,7 @@ class BasePlugin:
         Domoticz.Log("Received: " + str(Data))
 
         command = json.loads(Data)
+
         Domoticz.Log("Command: " + command['action'])
         if command['status'] == "Ok":
             action = command['action']
@@ -169,6 +190,11 @@ class BasePlugin:
             if action == "getLights":
                 self.registerDevices(json.loads(Data)['result'])
 
+            if action == "deviceUpdate":
+                self.updateDeviceState(json.loads(Data)['result'])
+
+
+
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         #
@@ -178,12 +204,14 @@ class BasePlugin:
         #
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
             if Command=="On":
+                self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
                 #targetDevice.light_control.set_state(True)
                 #currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
                 #Domoticz.Log("Current level: " + str(currentLevel))
                 #Devices[Unit].Update(nValue=1, sValue=str(currentLevel))
-                pass
+                #pass
             if Command=="Off":
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
                 #currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
                 #targetDevice.light_control.set_state(False)
                 #Devices[Unit].Update(nValue=0, sValue=str(currentLevel))

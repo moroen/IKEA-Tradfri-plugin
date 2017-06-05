@@ -37,6 +37,9 @@ class CoapAdapter(TelnetProtocol):
         if command['action']=="setLevel":
             self.factory.setLevel(self, command["deviceID"], command["level"])
 
+        if command['action']=="setState":
+            self.factory.setState(self, command["deviceID"], command["state"])
+
     def connectionLost(self, reason):
         print("Disconnected")
         self.factory.clients.remove(self)
@@ -118,6 +121,38 @@ class AdaptorFactory(ServerFactory):
         targetDevice.light_control.set_dimmer(level)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+    def setState(self, client, deviceID, state):
+        answer = {}
+        answer["action"] = "setState"
+        answer["status"] = "Ok"
+
+        targetDevice = self.gateway.get_device(int(deviceID))
+
+        if state == "On":
+            targetDevice.light_control.set_state(True)
+
+        if state == "Off":
+            targetDevice.light_control.set_state(False)
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+        self.sendState(client, deviceID)
+
+    def sendState(self, client, deviceID):
+        devices = []
+        answer = {}
+        targetDevice = self.gateway.get_device(int(deviceID))
+
+        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
+
+        answer["action"] = "deviceUpdate"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+
 
 # devices = gateway.get_devices()
 # lights = [dev for dev in devices if dev.has_light_control]
