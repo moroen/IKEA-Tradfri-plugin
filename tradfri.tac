@@ -51,10 +51,12 @@ class AdaptorFactory(ServerFactory):
         self.devices = None
         self.lights = None
 
+        self.lighStatus = {}
+
         self.lc = task.LoopingCall(self.announce)
         # self.lc.start(10)
 
-        reactor.addSystemEventTrigger("before", "shutdown", self.logout)
+        # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
     def logout(self):
         print("Logout")
@@ -68,18 +70,18 @@ class AdaptorFactory(ServerFactory):
         for client in self.clients:
             client.transport.write("Announce!\n".encode(encoding='utf_8'))
 
-    def deviceChanged(self, deviceID):
-        print("Executed in reactor thread")
-
-
-    def change_listener(self, device):
-        print(device.name + " is now " + str(device.light_control.lights[0].state))
-        print("Calling in reactor thread")
-        reactor.callFromThread(self.deviceChanged, device.id)
-
-    def blockingSetListen(self):
-        while 1:
-            self.lights[0].observe(self.change_listener)
+    # def deviceChanged(self, deviceID):
+    #     print("Executed in reactor thread")
+    #
+    #
+    # def change_listener(self, device):
+    #     print(device.name + " is now " + str(device.light_control.lights[0].state))
+    #     print("Calling in reactor thread")
+    #     reactor.callFromThread(self.deviceChanged, device.id)
+    #
+    # def blockingSetListen(self):
+    #     while 1:
+    #         self.lights[0].observe(self.change_listener)
 
     def initGateway(self, client, ip, key):
         self.api = pytradfri.coap_cli.api_factory(ip, key)
@@ -88,17 +90,18 @@ class AdaptorFactory(ServerFactory):
         self.devices = self.gateway.get_devices()
         self.lights = [dev for dev in self.devices if dev.has_light_control]
 
-        print("Set listener")
-        reactor.callInThread(self.blockingSetListen)
-        print("Set listener done")
         client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
+
+        #for aDev in self.lights:
+        #   currentDev["state"] = aDev.light_control.lights[0].state
+        #   self.lighStatus[aDev.id] = currentDev
 
     def sendDeviceList(self, client):
         devices = []
         answer = {}
 
         for aDevice in self.lights:
-            devices.append({"DeviceID": aDevice.id, "Name": aDevice.name, "State": aDevice.light_control.lights[0].state})
+            devices.append({"DeviceID": aDevice.id, "Name": aDevice.name, "State": aDevice.light_control.lights[0].state, "Level": aDevice.light_control.lights[0].dimmer, "WhiteBalance": aDevice.light_control.lights[0].hex_color})
 
         answer["action"] = "getLights"
         answer["status"] = "Ok"
