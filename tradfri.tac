@@ -44,8 +44,26 @@ class CoapAdapter(TelnetProtocol):
         print("Disconnected")
         self.factory.clients.remove(self)
 
+class ikeaLight():
+    deviceID = None
+    deviceName = None
+    lastState = None
+    lastLevel = None
+    lastWB = None
+
+    device = None
+
+    def __init__(self, device):
+        self.device = device
+        self.deviceID = device.id
+        self.deviceName = device.name
+        self.lastState = device.light_control.lights[0].state
+        self.lastLevel = device.light_control.lights[0].dimmer
+        self.lastWB = device.light_control.lights[0].hex_color
 
 class AdaptorFactory(ServerFactory):
+
+    ikeaLights = {}
 
     def __init__(self):
         self.clients = []
@@ -91,20 +109,21 @@ class AdaptorFactory(ServerFactory):
         self.gateway = pytradfri.gateway.Gateway(self.api)
 
         self.devices = self.gateway.get_devices()
-        self.lights = [dev for dev in self.devices if dev.has_light_control]
+        # self.lights = [dev for dev in self.devices if dev.has_light_control]
 
         client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
 
-        #for aDev in self.lights:
-        #   currentDev["state"] = aDev.light_control.lights[0].state
-        #   self.lighStatus[aDev.id] = currentDev
+        for dev in self.devices:
+            if dev.has_light_control:
+                self.ikeaLights[dev.id] = ikeaLight(dev)
 
     def sendDeviceList(self, client):
         devices = []
         answer = {}
 
-        for aDevice in self.lights:
-            devices.append({"DeviceID": aDevice.id, "Name": aDevice.name, "State": aDevice.light_control.lights[0].state, "Level": aDevice.light_control.lights[0].dimmer, "WhiteBalance": aDevice.light_control.lights[0].hex_color})
+        for key, aDevice in self.ikeaLights.items():
+            print (aDevice)
+            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName})
 
         answer["action"] = "getLights"
         answer["status"] = "Ok"

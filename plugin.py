@@ -241,7 +241,10 @@ class BasePlugin:
         Domoticz.Log("onDisconnect called")
 
     def onHeartbeat(self):
-        Domoticz.Log("onHeartbeat called")
+        # Domoticz.Log("onHeartbeat called")
+        if not self.CoapAdapter.Connected():
+            Domoticz.Log("onHeartbeat called - not connected")
+            self.CoapAdapter.Connect()
 
 global _plugin
 _plugin = BasePlugin()
