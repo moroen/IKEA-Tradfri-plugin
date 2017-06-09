@@ -52,14 +52,43 @@ class ikeaLight():
     lastWB = None
 
     device = None
+    factory = None
 
-    def __init__(self, device):
+    def __init__(self, factory, device):
         self.device = device
         self.deviceID = device.id
         self.deviceName = device.name
         self.lastState = device.light_control.lights[0].state
         self.lastLevel = device.light_control.lights[0].dimmer
         self.lastWB = device.light_control.lights[0].hex_color
+        self.factory = factory
+
+
+    def hasChanged(self):
+        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+        curState = targetDevice.light_control.lights[0].state
+
+        print ("Checking change for {0} lastState: {1} currentState: {2}".format(self.deviceName, self.lastState, curState))
+
+        if curState != self.lastState:
+            self.lastState = curState
+            return True
+        else:
+            return False
+
+    def sendState(self, client):
+        devices = []
+        answer = {}
+        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+
+        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
+
+        answer["action"] = "deviceUpdate"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
 
 class AdaptorFactory(ServerFactory):
 
@@ -75,7 +104,7 @@ class AdaptorFactory(ServerFactory):
         self.lighStatus = {}
 
         self.lc = task.LoopingCall(self.announce)
-        # self.lc.start(10)
+        #self.lc.start(5)
 
         # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
@@ -87,9 +116,16 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
-        print ("Number of clients: " + str(len(self.clients)))
-        for client in self.clients:
-            client.transport.write("Announce!\n".encode(encoding='utf_8'))
+
+        #print ("Number of clients: " + str(len(self.clients)))
+        #for client in self.clients:
+        #    client.transport.write("Announce!\n".encode(encoding='utf_8'))
+
+        for key, aDevice in self.ikeaLights.items():
+            if aDevice.hasChanged():
+                print("Device changed: " + aDevice.deviceName)
+                #for client in self.clients:
+                #    self.sendState(client, aDevice.deviceID)
 
     # def deviceChanged(self, deviceID):
     #     print("Executed in reactor thread")
@@ -115,7 +151,7 @@ class AdaptorFactory(ServerFactory):
 
         for dev in self.devices:
             if dev.has_light_control:
-                self.ikeaLights[dev.id] = ikeaLight(dev)
+                self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
 
     def sendDeviceList(self, client):
         devices = []
@@ -130,6 +166,9 @@ class AdaptorFactory(ServerFactory):
         answer["result"] =  devices
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+        for aDev in self.ikeaLights:
+            self.ikeaLights[aDev].sendState(client)
 
     def setLevel(self, client, deviceID, level):
         answer = {}
@@ -158,18 +197,7 @@ class AdaptorFactory(ServerFactory):
 
         self.sendState(client, deviceID)
 
-    def sendState(self, client, deviceID):
-        devices = []
-        answer = {}
-        targetDevice = self.gateway.get_device(int(deviceID))
 
-        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
-
-        answer["action"] = "deviceUpdate"
-        answer["status"] = "Ok"
-        answer["result"] =  devices
-
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
 
 

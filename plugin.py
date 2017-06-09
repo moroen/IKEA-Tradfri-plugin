@@ -30,6 +30,8 @@ class BasePlugin:
     lights = {}
 
     CoapAdapter = None
+    outstandingPings = 0
+    nextConnect = 3
 
     def __init__(self):
         self.pluginStatus = 0
@@ -88,7 +90,9 @@ class BasePlugin:
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
-
+    def connectToAdaptor(self):
+        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
+        self.CoapAdapter.Connect()
 
     def onStart(self):
         Domoticz.Log("onStart called")
@@ -96,6 +100,7 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
+        Domoticz.Heartbeat(3)
         #Test
         # Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
 
@@ -104,60 +109,7 @@ class BasePlugin:
             for aUnit in Devices:
                 self.lights[Devices[aUnit].DeviceID] = {"DeviceID": Devices[aUnit].DeviceID, "Unit": aUnit}
 
-        # myConn = Domoticz.Connection(Transport="TCP/IP", Protocol="line", Address=Parameters["Address"], Port=Parameters["Port"])
-        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
-        self.CoapAdapter.Connect()
-        #myListen = Domoticz.Connection(Transport="TCP/IP", Protocol="JSON", Port=1235)
-        #myListen.Listen()
-
-        #Domoticz.Transport(Transport="TCP/IP", Address=Parameters["Address"], Port=Parameters["Port"])
-
-        # currentUnits = {}
-        #
-        # self.api = pytradfri.coap_cli.api_factory(Parameters["Address"],Parameters["Mode1"])
-        # self.gateway = pytradfri.gateway.Gateway(self.api)
-        #
-        # ikea_devices = self.gateway.get_devices()
-        # lights = [dev for dev in ikea_devices if dev.has_light_control]
-        #
-        # listOfIkeaIDs = [int(dev.id) for dev in lights]
-        # listOfDeviceIDs = [int(Devices[aUnit].DeviceID) for aUnit in Devices]
-        # listOfUnitIds = list(Devices.keys())
-        #
-        # WhiteOptions = {"LevelActions": "||", "LevelNames": "Cold|Normal|Warm", "LevelOffHidden": "false","SelectorStyle": "0"}
-        #
-        # if (len(Devices) == 0):
-        #     i=1
-        # else:
-        #     i=int(listOfUnitIds[-1])+1
-        #
-        # if Parameters["Mode6"] == "Debug":
-        #     Domoticz.Debugging(1)
-        #
-        # # Add unregistered lights
-        # for aLight in lights:
-        #     if not int(aLight.id) in listOfDeviceIDs:
-        #         Domoticz.Device(Name=aLight.name, Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=str(aLight.id)).Create()
-        #         i=i+1
-        #         Domoticz.Device(Name=aLight.name + " - White Temperature",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=str(aLight.id)).Create()
-        #         i=i+1
-        #
-        # # Remove registered lights no longer found on the gateway
-        # for aUnit in listOfUnitIds:
-        #     if not int(Devices[aUnit].DeviceID) in listOfIkeaIDs:
-        #         Devices[aUnit].Delete()
-        #
-        # # Sync deviceStates
-        # for aUnit in Devices:
-        #     targetDevice = self.gateway.get_device(int(Devices[aUnit].DeviceID))
-        #     currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
-        #     state = int(targetDevice.light_control.lights[0].state)
-        #     Devices[aUnit].Update(nValue=state, sValue=str(currentLevel))
-
-        #Test
-        #Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
-
-
+        self.connectToAdaptor();
 
     def onStop(self):
         Domoticz.Log("onStop called")
@@ -166,12 +118,14 @@ class BasePlugin:
     def onConnect(self, Connection, Status, Description):
         Domoticz.Log("onConnect called")
 
-        if Status==0:
+        if (Status==0):
             if self.pluginStatus == 0:
                 Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"]}).encode(encoding='utf_8'), Delay=1)
                 self.pluginStatus=1
         else:
-            Domoticz.Log("Connection failed")
+            Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
+            self.CoapAdapter = None
+        return True
 
     def onMessage(self, Connection, Data, Status, Extra):
         Domoticz.Log("onMessage called")
@@ -239,12 +193,21 @@ class BasePlugin:
 
     def onDisconnect(self, Connection):
         Domoticz.Log("onDisconnect called")
+        self.pluginStatus = 0
+        self.CoapAdapter = None
 
     def onHeartbeat(self):
         # Domoticz.Log("onHeartbeat called")
-        if not self.CoapAdapter.Connected():
-            Domoticz.Log("onHeartbeat called - not connected")
-            self.CoapAdapter.Connect()
+        if self.CoapAdapter != None:
+            if (self.CoapAdapter.Connected() == True):
+                print ("Connection alive")
+        else:
+            print ("Not connected - outstandingPings {0} nextConnect: {1}".format(self.outstandingPings, self.nextConnect))
+            self.outstandingPings = 0
+            self.nextConnect = self.nextConnect - 1
+            if (self.nextConnect <= 0):
+                self.nextConnect = 3
+                self.connectToAdaptor()
 
 global _plugin
 _plugin = BasePlugin()
