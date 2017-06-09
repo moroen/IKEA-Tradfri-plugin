@@ -104,7 +104,7 @@ class AdaptorFactory(ServerFactory):
         self.lighStatus = {}
 
         self.lc = task.LoopingCall(self.announce)
-        #self.lc.start(5)
+        self.lc.start(5)
 
         # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
@@ -116,16 +116,12 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
-
-        #print ("Number of clients: " + str(len(self.clients)))
-        #for client in self.clients:
-        #    client.transport.write("Announce!\n".encode(encoding='utf_8'))
-
         for key, aDevice in self.ikeaLights.items():
             if aDevice.hasChanged():
                 print("Device changed: " + aDevice.deviceName)
-                #for client in self.clients:
-                #    self.sendState(client, aDevice.deviceID)
+
+                for client in self.clients:
+                    aDevice.sendState(client)
 
     # def deviceChanged(self, deviceID):
     #     print("Executed in reactor thread")
@@ -152,6 +148,8 @@ class AdaptorFactory(ServerFactory):
         for dev in self.devices:
             if dev.has_light_control:
                 self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
+
+        self.announce()
 
     def sendDeviceList(self, client):
         devices = []
