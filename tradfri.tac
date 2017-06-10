@@ -23,13 +23,13 @@ class CoapAdapter(TelnetProtocol):
         self.factory.clients.append(self)
 
     def dataReceived(self, data):
-        print("Received: " + str(data))
+        # print("Received: " + str(data))
         command = json.loads(data)
-        print(command['action'])
+        #print(command['action'])
 
         if command['action']=="setConfig":
-            print("Setting config")
-            self.factory.initGateway(self, command['gateway'], command['key'])
+            # print("Setting config")
+            self.factory.initGateway(self, command['gateway'], command['key'], command['observe'])
 
         if command['action']=="getLights":
             self.factory.sendDeviceList(self)
@@ -67,14 +67,18 @@ class ikeaLight():
     def hasChanged(self):
         targetDevice = self.factory.gateway.get_device(int(self.deviceID))
         curState = targetDevice.light_control.lights[0].state
+        curLevel = targetDevice.light_control.lights[0].dimmer
+        curWB = targetDevice.light_control.lights[0].hex_color
 
-        print ("Checking change for {0} lastState: {1} currentState: {2}".format(self.deviceName, self.lastState, curState))
+        # print ("Checking change for {0} lastState: {1} currentState: {2}".format(self.deviceName, self.lastState, curState))
 
-        if curState != self.lastState:
-            self.lastState = curState
-            return True
-        else:
+        if (curState == self.lastState) and (curLevel == self.lastLevel) and (curWB == self.lastWB):
             return False
+        else:
+            self.lastState = curState
+            self.lastLevel = curLevel
+            self.lastWB = curWB
+            return True
 
     def sendState(self, client):
         devices = []
@@ -104,12 +108,12 @@ class AdaptorFactory(ServerFactory):
         self.lighStatus = {}
 
         self.lc = task.LoopingCall(self.announce)
-        self.lc.start(5)
+        # self.lc.start(5)
 
         # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
     def logout(self):
-        print("Logout")
+        # print("Logout")
         reactor.stop()
 
     def buildProtocol(self, addr):
@@ -118,25 +122,10 @@ class AdaptorFactory(ServerFactory):
     def announce(self):
         for key, aDevice in self.ikeaLights.items():
             if aDevice.hasChanged():
-                print("Device changed: " + aDevice.deviceName)
-
                 for client in self.clients:
                     aDevice.sendState(client)
 
-    # def deviceChanged(self, deviceID):
-    #     print("Executed in reactor thread")
-    #
-    #
-    # def change_listener(self, device):
-    #     print(device.name + " is now " + str(device.light_control.lights[0].state))
-    #     print("Calling in reactor thread")
-    #     reactor.callFromThread(self.deviceChanged, device.id)
-    #
-    # def blockingSetListen(self):
-    #     while 1:
-    #         self.lights[0].observe(self.change_listener)
-
-    def initGateway(self, client, ip, key):
+    def initGateway(self, client, ip, key, observe):
         self.api = pytradfri.coap_cli.api_factory(ip, key)
         self.gateway = pytradfri.gateway.Gateway(self.api)
 
@@ -149,14 +138,18 @@ class AdaptorFactory(ServerFactory):
             if dev.has_light_control:
                 self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
 
-        self.announce()
+        if observe=="True":
+            if not self.lc.running:
+                self.lc.start(2)
+        else:
+            self.lc.stop()
 
     def sendDeviceList(self, client):
         devices = []
         answer = {}
 
         for key, aDevice in self.ikeaLights.items():
-            print (aDevice)
+            # print (aDevice)
             devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName})
 
         answer["action"] = "getLights"
@@ -192,19 +185,6 @@ class AdaptorFactory(ServerFactory):
             targetDevice.light_control.set_state(False)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-
-        self.sendState(client, deviceID)
-
-
-
-
-
-# devices = gateway.get_devices()
-# lights = [dev for dev in devices if dev.has_light_control]
-#
-#
-
-#
 
 if __name__ == "__main__":
     endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())

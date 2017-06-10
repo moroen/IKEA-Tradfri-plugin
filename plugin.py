@@ -7,12 +7,21 @@
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode1" label="Key" width="200px" required="true" default=""/>
+
+        <param field="Mode2" label="Observe changes" width="75px">
+            <options>
+                <option label="Yes" value="True"/>
+                <option label="No" value="False"  default="true" />
+            </options>
+        </param>
+
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
                 <option label="False" value="Normal"  default="true" />
             </options>
         </param>
+
     </params>
 </plugin>
 """
@@ -73,16 +82,18 @@ class BasePlugin:
                 Devices[aUnit].Delete()
 
     def updateDeviceState(self, deviceState):
-        print("DeviceState")
-        print(deviceState)
 
         for aDev in deviceState:
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
             nVal = 0
-            sVal = str(int((aDev["Level"]/250)*100))
-            #Domoticz.Log("Current level: " + str(currentLevel))
 
+            sValInt = int((aDev["Level"]/250)*100)
+            if sValInt == 0:
+                sValInt = 1
+
+            sVal = str(sValInt)
+            
             if aDev["State"] == True:
                 nVal = 1
             if aDev["State"] == False:
@@ -95,14 +106,12 @@ class BasePlugin:
         self.CoapAdapter.Connect()
 
     def onStart(self):
-        Domoticz.Log("onStart called")
+        # Domoticz.Log("onStart called")
 
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(3)
-        #Test
-        # Domoticz.Device(Name="To be removed", Unit=100,  TypeName="Switch", Switchtype=7, DeviceID="12345").Create()
+        Domoticz.Heartbeat(10)
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -112,15 +121,15 @@ class BasePlugin:
         self.connectToAdaptor();
 
     def onStop(self):
-        Domoticz.Log("onStop called")
+        #Domoticz.Log("onStop called")
         return True
 
     def onConnect(self, Connection, Status, Description):
-        Domoticz.Log("onConnect called")
+        #Domoticz.Log("onConnect called")
 
         if (Status==0):
             if self.pluginStatus == 0:
-                Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"]}).encode(encoding='utf_8'), Delay=1)
+                Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"]}).encode(encoding='utf_8'), Delay=1)
                 self.pluginStatus=1
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
@@ -128,12 +137,12 @@ class BasePlugin:
         return True
 
     def onMessage(self, Connection, Data, Status, Extra):
-        Domoticz.Log("onMessage called")
-        Domoticz.Log("Received: " + str(Data))
+        #Domoticz.Log("onMessage called")
+        #Domoticz.Log("Received: " + str(Data))
 
         command = json.loads(Data)
 
-        Domoticz.Log("Command: " + command['action'])
+        #Domoticz.Log("Command: " + command['action'])
         if command['status'] == "Ok":
             action = command['action']
 
@@ -150,7 +159,7 @@ class BasePlugin:
 
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
+        # Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
         #
         # #Domoticz.Log(Devices[Unit].Name + " - Type: "+str(Devices[Unit].Type) + "Subtype: " + str(Devices[Unit].SubType))
         #
@@ -159,40 +168,20 @@ class BasePlugin:
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
             if Command=="On":
                 self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
-                #targetDevice.light_control.set_state(True)
-                #currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
-                #Domoticz.Log("Current level: " + str(currentLevel))
-                #Devices[Unit].Update(nValue=1, sValue=str(currentLevel))
-                #pass
+
             if Command=="Off":
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
-                #currentLevel = int((targetDevice.light_control.lights[0].dimmer/250)*100)
-                #targetDevice.light_control.set_state(False)
-                #Devices[Unit].Update(nValue=0, sValue=str(currentLevel))
-                pass
+
             if Command=="Set Level":
                 targetLevel = int(int(Level)*250/100)
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'), Delay=1)
-                #targetDevice.light_control.set_dimmer(targetLevel)
-                #Devices[Unit].Update(nValue=1, sValue=str(Level))
-        #
-        # if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
-        #     Domoticz.Log("nValue: "+str(Devices[Unit].nValue)+" sValue: "+str(Devices[Unit].sValue))
-        #     if Level==0:
-        #         targetDevice.light_control.set_hex_color("f5faf6")
-        #     if Level==10:
-        #         targetDevice.light_control.set_hex_color("f1e0b5")
-        #     if Level==20:
-        #         targetDevice.light_control.set_hex_color("efd275")
-        #
-        #     Devices[Unit].Update(nValue=1, sValue=str(Level))
 
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
 
     def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called")
+        # Domoticz.Log("onDisconnect called")
         self.pluginStatus = 0
         self.CoapAdapter = None
 
@@ -200,9 +189,9 @@ class BasePlugin:
         # Domoticz.Log("onHeartbeat called")
         if self.CoapAdapter != None:
             if (self.CoapAdapter.Connected() == True):
-                print ("Connection alive")
+                pass
         else:
-            print ("Not connected - outstandingPings {0} nextConnect: {1}".format(self.outstandingPings, self.nextConnect))
+            Domoticz.Log("Not connected - nextConnect: {0}".format(self.nextConnect))
             self.outstandingPings = 0
             self.nextConnect = self.nextConnect - 1
             if (self.nextConnect <= 0):
