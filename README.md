@@ -1,32 +1,30 @@
 A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
-<H1>Plugin</H1>
+# Plugin
 
-Requirements:
+## Requirements:
 1. Domoticz compiled with support for Python-Plugins / lastest beta
 2. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri)
 3. Twisted (https://twistedmatrix.com/trac/)
 3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
-Installation
+## Installation
 1. Install libcoap as per ggravlingen's description
-2. Install pytradfri-library using either <br>
-  a) pip3:
-  ```shell
-  pip3 install pytradfri
-  ```
-  
-  or
-  
-  b) Cloning the pytradfri repository and installing using setup.py <br>
-  
-    ```shell
-    $ git clone https://github.com/ggravlingen/pytradfri.git
-    $ cd pytradfri
-    $ python3 setup.py install
-    ```
+2. Install pytradfri-library using either pip3 or Cloning the pytradfri repository and installing using setup.py
+```shell
+  $ pip3 install pytradfri
+```
+or
+```shell
+$ git clone https://github.com/ggravlingen/pytradfri.git
+$ cd pytradfri
+$ python3 setup.py install
+```
   
 3. Install twisted
+```
+$ pip3 install twisted
+```
 
 4. Install plugin and enable COAP-adaptor
 
