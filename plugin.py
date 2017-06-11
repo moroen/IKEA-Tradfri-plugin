@@ -1,6 +1,6 @@
-# Basic Python Plugin Example
+# IKEA Tradfri Python Plugin
 #
-# Author: GizMoCuz
+# Author: moroen
 #
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
@@ -93,7 +93,7 @@ class BasePlugin:
                 sValInt = 1
 
             sVal = str(sValInt)
-            
+
             if aDev["State"] == True:
                 nVal = 1
             if aDev["State"] == False:
@@ -140,7 +140,7 @@ class BasePlugin:
         #Domoticz.Log("onMessage called")
         #Domoticz.Log("Received: " + str(Data))
 
-        command = json.loads(Data)
+        command = json.loads(Data.decode("utf-8"))
 
         #Domoticz.Log("Command: " + command['action'])
         if command['status'] == "Ok":
@@ -151,10 +151,10 @@ class BasePlugin:
                 Connection.Send(Message=json.dumps({"action":"getLights"}).encode(encoding='utf_8'), Delay=1)
 
             if action == "getLights":
-                self.registerDevices(json.loads(Data)['result'])
+                self.registerDevices(command['result'])
 
             if action == "deviceUpdate":
-                self.updateDeviceState(json.loads(Data)['result'])
+                self.updateDeviceState(command['result'])
 
 
 

@@ -24,7 +24,7 @@ class CoapAdapter(TelnetProtocol):
 
     def dataReceived(self, data):
         # print("Received: " + str(data))
-        command = json.loads(data)
+        command = json.loads(data.decode("utf-8"))
         #print(command['action'])
 
         if command['action']=="setConfig":
@@ -142,7 +142,8 @@ class AdaptorFactory(ServerFactory):
             if not self.lc.running:
                 self.lc.start(2)
         else:
-            self.lc.stop()
+            if self.lc.running:
+                self.lc.stop()
 
     def sendDeviceList(self, client):
         devices = []

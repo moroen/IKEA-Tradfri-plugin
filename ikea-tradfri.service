@@ -1,0 +1,15 @@
+[Unit]
+Description=IKEA Tradfri COAP-adapter
+
+[Service]
+Type=simple
+
+ExecStart=/usr/local/bin/twistd --nodaemon -y /opt/domoticz/plugins/IKEA-Tradfri/tradfri.tac
+
+User=root
+Group=root
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
