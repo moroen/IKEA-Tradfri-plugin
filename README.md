@@ -11,13 +11,13 @@ Since domoticz plugins doesn't support COAP and also doesn't allow threads or as
 3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
 ## Installation
-1. Install libcoap as per ggravlingen's description
-2. Install pytradfri-library 
+### 1. Install libcoap as per ggravlingen's description
+### 2. Install pytradfri-library 
 ```shell
   $ pip3 install pytradfri
 ```
 
-### or
+#### or
 
 ```
 $ git clone https://github.com/ggravlingen/pytradfri.git
@@ -25,26 +25,26 @@ $ cd pytradfri
 $ python3 setup.py install
 ```
 
-3. Install twisted
+### 3. Install twisted
 ```
 $ pip3 install twisted
 ```
 
-4. Clone IKEA-tradfri plugin into domoticz plugins-directory
+### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
 ~/$ cd /opt/domoticz/plugins/
 /opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 ```
 
-5. Enable COAP-adaptor
+### 5. Enable COAP-adaptor
 
-### From prompt (for testing)
+#### From prompt (for testing)
 ```
 /opt/domoticz/plugins/IKEA-Tradfri$ python3 tradfri.tac
 ```
 
-### Using systemd
-Edit the ikea-tradfri.service-file, and specify the right path to the IKEA-tradfri directory and change user if not to be run as root, copy the service-file to systemd-service directory and reload systemd-daemon
+#### Using systemd
+Edit the ikea-tradfri.service-file, and specify the right path to the IKEA-tradfri directory and change user if the adaptor should run as another user than root. Then copy the service-file to systemd-service directory, reload systemd-daemon and start the IKEA-tradfri service:
 ```
 /opt/domoticz/plugins/IKEA-Tradfri$ sudo cp ikea-tradfri.service /lib/systemd/system/
 /opt/domoticz/plugins/IKEA-Tradfri$ sudo systemctl daemon-reload
@@ -53,10 +53,11 @@ Edit the ikea-tradfri.service-file, and specify the right path to the IKEA-tradf
 
 #### Using systemd to start the COAP-adaptor on startup
 ```
-$ sudo systemctl enable ike-tradfri.service
+$ sudo systemctl enable ikea-tradfri.service
 ```
 
-6. Restart domoticz and enable IKEA-Tradfri from the hardware page
+### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
+To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights) 
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
