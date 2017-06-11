@@ -57,7 +57,7 @@ $ sudo systemctl enable ikea-tradfri.service
 ```
 
 ### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
-To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights) 
+To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page.
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
