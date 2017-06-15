@@ -7,25 +7,41 @@ from twisted.application.internet import TCPServer
 from twisted.application.service import Application
 
 import json
+import sys
 
 import twisted.scripts.twistd as t
 import pytradfri
+
+version = "0.1"
+verbose = False
+
+def verbosePrint(txt):
+    if verbose:
+        print(txt)
 
 class CoapAdapter(TelnetProtocol):
     api = ""
     gateway = ""
 
+
     def __init__(self, factory):
         self.factory = factory
 
     def connectionMade(self):
+        answer = {}
         print("Connected from " + str(self.transport.getPeer()))
         self.factory.clients.append(self)
 
+        answer["action"] = "clientConnect"
+        answer["status"] = "Ok"
+        answer["version"] = version
+
+        self.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
     def dataReceived(self, data):
-        # print("Received: " + str(data))
+        verbosePrint("Data received: " + str(data))
+        # try:
         command = json.loads(data.decode("utf-8"))
-        #print(command['action'])
 
         if command['action']=="setConfig":
             # print("Setting config")
@@ -39,6 +55,9 @@ class CoapAdapter(TelnetProtocol):
 
         if command['action']=="setState":
             self.factory.setState(self, command["deviceID"], command["state"])
+        #except:
+        #    print("Error: Failed to parse JSON")
+        #    print("Unexpected error:", sys.exc_info()[0])
 
     def connectionLost(self, reason):
         print("Disconnected")
@@ -188,6 +207,8 @@ class AdaptorFactory(ServerFactory):
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
 if __name__ == "__main__":
+    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!\nWaiting for connection".format(version))
+    verbose = True
     endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())
     reactor.run()
 else:
