@@ -108,11 +108,17 @@ class ikeaLight():
         targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
         targetDevice = self.factory.api(targetDeviceCommand)
 
-        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
+        targetLevel = targetDevice.light_control.lights[0].dimmer
+        if targetLevel == None:
+            targetLevel = 0
+
+        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetLevel, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
 
         answer["action"] = "deviceUpdate"
         answer["status"] = "Ok"
         answer["result"] =  devices
+
+        print(answer)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 

@@ -27,7 +27,6 @@
 """
 import Domoticz
 import json
-#import pytradfri
 
 class BasePlugin:
     #enabled = False
@@ -37,7 +36,6 @@ class BasePlugin:
     pluginStatus = 0
     # Dict of registered lights
     lights = {}
-
     CoapAdapter = None
     outstandingPings = 0
     nextConnect = 3
@@ -111,7 +109,7 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(10)
+        Domoticz.Heartbeat(5)
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -128,12 +126,12 @@ class BasePlugin:
         #Domoticz.Log("onConnect called")
 
         if (Status==0):
+            Domoticz.Log("Connected successfully to: "+Parameters["Address"])
             if self.pluginStatus == 0:
                 Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"]}).encode(encoding='utf_8'), Delay=1)
                 self.pluginStatus=1
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
-            self.CoapAdapter = None
         return True
 
     def onMessage(self, Connection, Data, Status, Extra):
@@ -181,22 +179,19 @@ class BasePlugin:
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
 
     def onDisconnect(self, Connection):
-        # Domoticz.Log("onDisconnect called")
-        self.pluginStatus = 0
-        self.CoapAdapter = None
+        self.isConnected = False
+        Domoticz.Log("Device has disconnected")
+        return
 
     def onHeartbeat(self):
-        # Domoticz.Log("onHeartbeat called")
-        if self.CoapAdapter != None:
-            if (self.CoapAdapter.Connected() == True):
-                pass
+        if (self.CoapAdapter.Connected() == True):
+            pass
         else:
-            Domoticz.Log("Not connected - nextConnect: {0}".format(self.nextConnect))
-            self.outstandingPings = 0
-            self.nextConnect = self.nextConnect - 1
-            if (self.nextConnect <= 0):
+            Domoticz.Debug("Not connected - nextConnect: {0}".format(self.nextConnect))
+            self.nextConnect = self.nextConnect -1
+            if self.nextConnect <=0:
                 self.nextConnect = 3
-                self.connectToAdaptor()
+                self.CoapAdapter.Connect()
 
 global _plugin
 _plugin = BasePlugin()
