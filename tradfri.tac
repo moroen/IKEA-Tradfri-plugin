@@ -10,7 +10,8 @@ import json
 import sys
 
 import twisted.scripts.twistd as t
-import pytradfri
+from pytradfri import Gateway
+from pytradfri.api.libcoap_api import api_factory
 
 version = "0.1"
 verbose = False
@@ -84,7 +85,9 @@ class ikeaLight():
 
 
     def hasChanged(self):
-        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
+        targetDevice = self.factory.api(targetDeviceCommand)
+
         curState = targetDevice.light_control.lights[0].state
         curLevel = targetDevice.light_control.lights[0].dimmer
         curWB = targetDevice.light_control.lights[0].hex_color
@@ -102,7 +105,8 @@ class ikeaLight():
     def sendState(self, client):
         devices = []
         answer = {}
-        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
+        targetDevice = self.factory.api(targetDeviceCommand)
 
         devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
 
@@ -145,10 +149,12 @@ class AdaptorFactory(ServerFactory):
                     aDevice.sendState(client)
 
     def initGateway(self, client, ip, key, observe):
-        self.api = pytradfri.coap_cli.api_factory(ip, key)
-        self.gateway = pytradfri.gateway.Gateway(self.api)
+        self.api = api_factory(ip, key)
+        self.gateway = Gateway()
 
-        self.devices = self.gateway.get_devices()
+        devices_command = self.gateway.get_devices()
+        devices_commands = self.api(devices_command)
+        self.devices = self.api(*devices_commands)
         # self.lights = [dev for dev in self.devices if dev.has_light_control]
 
         client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
@@ -186,8 +192,11 @@ class AdaptorFactory(ServerFactory):
         answer["action"] = "setLevel"
         answer["status"] = "Ok"
 
-        targetDevice = self.gateway.get_device(int(deviceID))
-        targetDevice.light_control.set_dimmer(level)
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
+
+        setLevelCommand = targetDevice.light_control.set_dimmer(level)
+        self.api(setLevelCommand)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
@@ -196,13 +205,16 @@ class AdaptorFactory(ServerFactory):
         answer["action"] = "setState"
         answer["status"] = "Ok"
 
-        targetDevice = self.gateway.get_device(int(deviceID))
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
 
         if state == "On":
-            targetDevice.light_control.set_state(True)
+            setStateCommand = targetDevice.light_control.set_state(True)
 
         if state == "Off":
-            targetDevice.light_control.set_state(False)
+            setStateCommand = targetDevice.light_control.set_state(False)
+
+        self.api(setStateCommand)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
