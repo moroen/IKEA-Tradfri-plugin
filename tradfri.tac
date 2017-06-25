@@ -41,7 +41,7 @@ class CoapAdapter(TelnetProtocol):
 
     def dataReceived(self, data):
         verbosePrint("Data received: " + str(data))
-        # try:
+        
         command = json.loads(data.decode("utf-8"))
 
         if command['action']=="setConfig":
@@ -56,7 +56,11 @@ class CoapAdapter(TelnetProtocol):
 
         if command['action']=="setState":
             self.factory.setState(self, command["deviceID"], command["state"])
-        #except:
+
+        if command['action']=="setHex":
+            self.factory.setHex(self, command["deviceID"], command['hex'])
+
+        # except:
         #    print("Error: Failed to parse JSON")
         #    print("Unexpected error:", sys.exc_info()[0])
 
@@ -65,6 +69,10 @@ class CoapAdapter(TelnetProtocol):
         self.factory.clients.remove(self)
 
 class ikeaLight():
+
+    whiteTemps = {"cold":"f5faf6", "normal":"f1e0b5", "warm":"efd275"}
+
+
     deviceID = None
     deviceName = None
     lastState = None
@@ -73,6 +81,8 @@ class ikeaLight():
 
     device = None
     factory = None
+
+
 
     def __init__(self, factory, device):
         self.device = device
@@ -112,7 +122,7 @@ class ikeaLight():
         if targetLevel == None:
             targetLevel = 0
 
-        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetLevel, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
+        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetLevel, "Hex": targetDevice.light_control.lights[0].hex_color})
 
         answer["action"] = "deviceUpdate"
         answer["status"] = "Ok"
@@ -121,7 +131,6 @@ class ikeaLight():
         print(answer)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-
 
 class AdaptorFactory(ServerFactory):
 
@@ -135,11 +144,7 @@ class AdaptorFactory(ServerFactory):
         self.lights = None
 
         self.lighStatus = {}
-
         self.lc = task.LoopingCall(self.announce)
-        # self.lc.start(5)
-
-        # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
     def logout(self):
         # print("Logout")
@@ -221,6 +226,20 @@ class AdaptorFactory(ServerFactory):
             setStateCommand = targetDevice.light_control.set_state(False)
 
         self.api(setStateCommand)
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+    def setHex(self, client, deviceID, hex):
+        answer = {}
+        answer["action"] = "setHex"
+        answer["status"] = "Ok"
+
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
+
+        setHexCommand = targetDevice.light_control.set_hex_color(hex)
+
+        self.api(setHexCommand)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 

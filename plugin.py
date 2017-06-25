@@ -40,6 +40,9 @@ class BasePlugin:
     outstandingPings = 0
     nextConnect = 3
 
+    whiteTemps = {0:"f5faf6", 10:"f1e0b5", 20:"efd275"}
+    hexLevels = {"f5faf6":0, "f1e0b5":10, "efd275":20}
+
     def __init__(self):
         self.pluginStatus = 0
         return
@@ -99,6 +102,16 @@ class BasePlugin:
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
+            if "Hex" in aDev:
+                if aDev["Hex"] != None:
+                    wbdevID = devID+":WB"
+                    targetUnit = self.lights[wbdevID]['Unit']
+                    targetLevel = self.hexLevels[aDev['Hex']]
+
+                    Domoticz.Debug("Hex: "+aDev["Hex"]+" Target Unit: "+str(targetUnit)+" Target level: "+str(targetLevel))
+                    
+                    Devices[targetUnit].Update(nValue=1, sValue=str(targetLevel))
+
     def connectToAdaptor(self):
         self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
         self.CoapAdapter.Connect()
@@ -127,9 +140,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            if self.pluginStatus == 0:
-                Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"]}).encode(encoding='utf_8'), Delay=1)
-                self.pluginStatus=1
+            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
@@ -157,12 +168,8 @@ class BasePlugin:
 
 
     def onCommand(self, Unit, Command, Level, Hue):
-        # Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-        #
-        # #Domoticz.Log(Devices[Unit].Name + " - Type: "+str(Devices[Unit].Type) + "Subtype: " + str(Devices[Unit].SubType))
-        #
-        # targetDevice = self.gateway.get_device(int(Devices[Unit].DeviceID))
-        #
+        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType))
+
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
             if Command=="On":
                 self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
@@ -174,6 +181,13 @@ class BasePlugin:
                 targetLevel = int(int(Level)*250/100)
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'), Delay=1)
 
+        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
+            hex = None
+
+            devId = Devices[Unit].DeviceID.split(':')[0]
+
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'), Delay=1)
+            
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
