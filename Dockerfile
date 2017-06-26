@@ -20,4 +20,5 @@ RUN python3 setup.py install
 RUN pip3 install twisted
 
 WORKDIR /usr/src/app
+EXPOSE 1234
 CMD /bin/bash
