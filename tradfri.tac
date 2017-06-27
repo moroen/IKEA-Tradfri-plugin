@@ -253,3 +253,9 @@ else:
     service = TCPServer(1234, factory)
     application = Application("IKEA Tradfri Adaptor")
     service.setServiceParent(application)
+
+def start_reactor():
+    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!\nWaiting for connection".format(version))
+    verbose = True
+    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())
+    reactor.run()

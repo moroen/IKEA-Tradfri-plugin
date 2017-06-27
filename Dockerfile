@@ -21,4 +21,4 @@ RUN pip3 install twisted
 
 WORKDIR /usr/src/app
 EXPOSE 1234
-CMD /bin/bash
+CMD python3 tradfri.tac
