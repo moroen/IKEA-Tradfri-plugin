@@ -72,7 +72,6 @@ class ikeaLight():
 
     whiteTemps = {"cold":"f5faf6", "normal":"f1e0b5", "warm":"efd275"}
 
-
     deviceID = None
     deviceName = None
     lastState = None
@@ -81,8 +80,6 @@ class ikeaLight():
 
     device = None
     factory = None
-
-
 
     def __init__(self, factory, device):
         self.device = device
@@ -154,10 +151,13 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
-        for key, aDevice in self.ikeaLights.items():
-            if aDevice.hasChanged():
-                for client in self.clients:
-                    aDevice.sendState(client)
+        try:
+            for key, aDevice in self.ikeaLights.items():
+                if aDevice.hasChanged():
+                    for client in self.clients:
+                        aDevice.sendState(client)
+        except Exception as e: 
+            print(e)
 
     def initGateway(self, client, ip, key, observe):
         self.api = api_factory(ip, key)
