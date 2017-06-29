@@ -10,7 +10,8 @@ import json
 import sys
 
 import twisted.scripts.twistd as t
-import pytradfri
+from pytradfri import Gateway
+from pytradfri.api.libcoap_api import api_factory
 
 version = "0.1"
 verbose = False
@@ -40,7 +41,7 @@ class CoapAdapter(TelnetProtocol):
 
     def dataReceived(self, data):
         verbosePrint("Data received: " + str(data))
-        # try:
+        
         command = json.loads(data.decode("utf-8"))
 
         if command['action']=="setConfig":
@@ -55,7 +56,11 @@ class CoapAdapter(TelnetProtocol):
 
         if command['action']=="setState":
             self.factory.setState(self, command["deviceID"], command["state"])
-        #except:
+
+        if command['action']=="setHex":
+            self.factory.setHex(self, command["deviceID"], command['hex'])
+
+        # except:
         #    print("Error: Failed to parse JSON")
         #    print("Unexpected error:", sys.exc_info()[0])
 
@@ -64,6 +69,10 @@ class CoapAdapter(TelnetProtocol):
         self.factory.clients.remove(self)
 
 class ikeaLight():
+
+    whiteTemps = {"cold":"f5faf6", "normal":"f1e0b5", "warm":"efd275"}
+
+
     deviceID = None
     deviceName = None
     lastState = None
@@ -72,6 +81,8 @@ class ikeaLight():
 
     device = None
     factory = None
+
+
 
     def __init__(self, factory, device):
         self.device = device
@@ -84,7 +95,9 @@ class ikeaLight():
 
 
     def hasChanged(self):
-        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
+        targetDevice = self.factory.api(targetDeviceCommand)
+
         curState = targetDevice.light_control.lights[0].state
         curLevel = targetDevice.light_control.lights[0].dimmer
         curWB = targetDevice.light_control.lights[0].hex_color
@@ -102,16 +115,22 @@ class ikeaLight():
     def sendState(self, client):
         devices = []
         answer = {}
-        targetDevice = self.factory.gateway.get_device(int(self.deviceID))
+        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
+        targetDevice = self.factory.api(targetDeviceCommand)
 
-        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetDevice.light_control.lights[0].dimmer, "WhiteBalance": targetDevice.light_control.lights[0].hex_color})
+        targetLevel = targetDevice.light_control.lights[0].dimmer
+        if targetLevel == None:
+            targetLevel = 0
+
+        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetLevel, "Hex": targetDevice.light_control.lights[0].hex_color})
 
         answer["action"] = "deviceUpdate"
         answer["status"] = "Ok"
         answer["result"] =  devices
 
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        print(answer)
 
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
 class AdaptorFactory(ServerFactory):
 
@@ -125,11 +144,7 @@ class AdaptorFactory(ServerFactory):
         self.lights = None
 
         self.lighStatus = {}
-
         self.lc = task.LoopingCall(self.announce)
-        # self.lc.start(5)
-
-        # reactor.addSystemEventTrigger("before", "shutdown", self.logout)
 
     def logout(self):
         # print("Logout")
@@ -145,10 +160,12 @@ class AdaptorFactory(ServerFactory):
                     aDevice.sendState(client)
 
     def initGateway(self, client, ip, key, observe):
-        self.api = pytradfri.coap_cli.api_factory(ip, key)
-        self.gateway = pytradfri.gateway.Gateway(self.api)
+        self.api = api_factory(ip, key)
+        self.gateway = Gateway()
 
-        self.devices = self.gateway.get_devices()
+        devices_command = self.gateway.get_devices()
+        devices_commands = self.api(devices_command)
+        self.devices = self.api(*devices_commands)
         # self.lights = [dev for dev in self.devices if dev.has_light_control]
 
         client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
@@ -186,8 +203,11 @@ class AdaptorFactory(ServerFactory):
         answer["action"] = "setLevel"
         answer["status"] = "Ok"
 
-        targetDevice = self.gateway.get_device(int(deviceID))
-        targetDevice.light_control.set_dimmer(level)
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
+
+        setLevelCommand = targetDevice.light_control.set_dimmer(level)
+        self.api(setLevelCommand)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
@@ -196,13 +216,30 @@ class AdaptorFactory(ServerFactory):
         answer["action"] = "setState"
         answer["status"] = "Ok"
 
-        targetDevice = self.gateway.get_device(int(deviceID))
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
 
         if state == "On":
-            targetDevice.light_control.set_state(True)
+            setStateCommand = targetDevice.light_control.set_state(True)
 
         if state == "Off":
-            targetDevice.light_control.set_state(False)
+            setStateCommand = targetDevice.light_control.set_state(False)
+
+        self.api(setStateCommand)
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+    def setHex(self, client, deviceID, hex):
+        answer = {}
+        answer["action"] = "setHex"
+        answer["status"] = "Ok"
+
+        targetDeviceCommand = self.gateway.get_device(int(deviceID))
+        targetDevice = self.api(targetDeviceCommand)
+
+        setHexCommand = targetDevice.light_control.set_hex_color(hex)
+
+        self.api(setHexCommand)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
@@ -216,3 +253,9 @@ else:
     service = TCPServer(1234, factory)
     application = Application("IKEA Tradfri Adaptor")
     service.setServiceParent(application)
+
+def start_reactor():
+    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!\nWaiting for connection".format(version))
+    verbose = True
+    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())
+    reactor.run()
