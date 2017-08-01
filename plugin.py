@@ -172,21 +172,21 @@ class BasePlugin:
 
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
             if Command=="On":
-                self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
+                self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
 
             if Command=="Off":
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'), Delay=1)
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
 
             if Command=="Set Level":
                 targetLevel = int(int(Level)*250/100)
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'), Delay=1)
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'))
 
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
             hex = None
 
             devId = Devices[Unit].DeviceID.split(':')[0]
 
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'), Delay=1)
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
             
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
