@@ -9,11 +9,12 @@ RUN mkdir -p /usr/src/app /usr/src/build
 WORKDIR /usr/src/build
 
 RUN python3 -m pip install cython
+RUN python3 -m pip install ipython
 
 RUN git clone https://github.com/ggravlingen/pytradfri.git
 WORKDIR /usr/src/build/pytradfri/script
 RUN ./install-aiocoap.sh
-RUN ./install-coap-client.sh
+# RUN ./install-coap-client.sh
 
 WORKDIR /usr/src/build/pytradfri
 RUN python3 setup.py install
