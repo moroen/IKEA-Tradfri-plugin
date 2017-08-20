@@ -1,5 +1,3 @@
-#!/usr/bin/env twistd
-
 from twisted.conch.telnet import TelnetTransport, TelnetProtocol
 from twisted.internet import protocol, task, reactor, endpoints
 from twisted.internet.protocol import ServerFactory
