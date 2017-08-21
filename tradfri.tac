@@ -39,24 +39,28 @@ class CoapAdapter(TelnetProtocol):
 
     def dataReceived(self, data):
         verbosePrint("Data received: " + str(data))
+
+        decoded = data.decode("utf-8")
+        decoded = '[' + decoded.replace('}{', '},{') + ']'
         
-        command = json.loads(data.decode("utf-8"))
+        commands = json.loads(decoded)
 
-        if command['action']=="setConfig":
-            # print("Setting config")
-            self.factory.initGateway(self, command['gateway'], command['key'], command['observe'])
+        for command in commands:
+            if command['action']=="setConfig":
+                # print("Setting config")
+                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'])
 
-        if command['action']=="getLights":
-            self.factory.sendDeviceList(self)
+            if command['action']=="getLights":
+                self.factory.sendDeviceList(self)
 
-        if command['action']=="setLevel":
-            self.factory.setLevel(self, command["deviceID"], command["level"])
+            if command['action']=="setLevel":
+                self.factory.setLevel(self, command["deviceID"], command["level"])
 
-        if command['action']=="setState":
-            self.factory.setState(self, command["deviceID"], command["state"])
+            if command['action']=="setState":
+                self.factory.setState(self, command["deviceID"], command["state"])
 
-        if command['action']=="setHex":
-            self.factory.setHex(self, command["deviceID"], command['hex'])
+            if command['action']=="setHex":
+                self.factory.setHex(self, command["deviceID"], command['hex'])
 
         # except:
         #    print("Error: Failed to parse JSON")
