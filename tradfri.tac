@@ -11,7 +11,7 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import api_factory
 
-version = "0.1"
+version = "0.2"
 verbose = False
 
 def verbosePrint(txt):
@@ -162,26 +162,33 @@ class AdaptorFactory(ServerFactory):
             print(e)
 
     def initGateway(self, client, ip, key, observe):
-        self.api = api_factory(ip, key)
-        self.gateway = Gateway()
+        connectedToGW = False
+        try:
+            self.api = api_factory(ip, key)
+            self.gateway = Gateway()
+            connectedToGW = True
+        except:
+            connectedToGW = False
 
-        devices_command = self.gateway.get_devices()
-        devices_commands = self.api(devices_command)
-        self.devices = self.api(*devices_commands)
-        # self.lights = [dev for dev in self.devices if dev.has_light_control]
+        if connectedToGW:
+            devices_command = self.gateway.get_devices()
+            devices_commands = self.api(devices_command)
+            self.devices = self.api(*devices_commands)
+        
+            for dev in self.devices:
+                if dev.has_light_control:
+                    self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
 
-        client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
+            if observe=="True":
+                if not self.lc.running:
+                    self.lc.start(2)
+            else:
+                if self.lc.running:
+                    self.lc.stop()
 
-        for dev in self.devices:
-            if dev.has_light_control:
-                self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
-
-        if observe=="True":
-            if not self.lc.running:
-                self.lc.start(2)
+            client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
         else:
-            if self.lc.running:
-                self.lc.stop()
+            client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
     def sendDeviceList(self, client):
         devices = []
