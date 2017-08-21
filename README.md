@@ -4,6 +4,9 @@ A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
 Since domoticz plugins doesn't support COAP and also doesn't allow threads or async calls, the IKEA-tradfri plugin contains two parts, the domoticz plugin and a python3 IKEA-tradfri adaptor written with the twisted framework. The adaptor needs to be running at all times, and is intented to be run as a service using systemd.
 
+## A note about branches
+The repository contains two primary branches. The 'master' branch is targeted at the master branch of domoticz, which should be the latest stable. The development branch tracks the domoticz developement branch, where the plugin interface still is in flux.
+
 ## Requirements:
 1. Domoticz compiled with support for Python-Plugins / lastest beta
 2. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri)
