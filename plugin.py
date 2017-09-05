@@ -68,9 +68,10 @@ class BasePlugin:
                 Domoticz.Device(Name=aLight['Name'], Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=devID).Create()
                 self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                 i=i+1
-                Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
-                self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
-                i=i+1
+                if aLight['HasWB'] == True:
+                    Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
+                    self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
+                    i=i+1
 
         #Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -148,7 +149,7 @@ class BasePlugin:
     #def onMessage(self, Connection, Data, Status, Extra):
     def onMessage(self, Connection, Data):
         #Domoticz.Log("onMessage called")
-        #Domoticz.Log("Received: " + str(Data))
+        Domoticz.Log("Received: " + str(Data))
 
         command = json.loads(Data.decode("utf-8"))
 
