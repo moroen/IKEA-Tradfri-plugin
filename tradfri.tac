@@ -221,25 +221,16 @@ class AdaptorFactory(ServerFactory):
             connectedToGW = False
 
         if connectedToGW:
-<<<<<<< HEAD
-            devices_command = self.gateway.get_devices()
-            devices_commands = self.api(devices_command)
-            self.devices = self.api(*devices_commands)
-=======
             self.devices = self.api(*self.api(self.gateway.get_devices()))
             self.groups = self.api(*self.api(self.gateway.get_groups()))
->>>>>>> origin/development
         
             for dev in self.devices:
                 if dev.has_light_control:
                     self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
 
-<<<<<<< HEAD
-=======
             for group in self.groups:
                 self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
 
->>>>>>> origin/development
             if observe=="True":
                 if not self.lc.running:
                     self.lc.start(2)

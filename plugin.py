@@ -146,8 +146,8 @@ class BasePlugin:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
 
-    #def onMessage(self, Connection, Data, Status, Extra):
-    def onMessage(self, Connection, Data):
+    def onMessage(self, Connection, Data, Status, Extra):
+    #def onMessage(self, Connection, Data):
         #Domoticz.Log("onMessage called")
         Domoticz.Log("Received: " + str(Data))
 
@@ -226,9 +226,9 @@ def onConnect(Connection, Status, Description):
     global _plugin
     _plugin.onConnect(Connection, Status, Description)
 
-def onMessage(Connection, Data):
+def onMessage(Connection, Data, Status, Extra):
     global _plugin
-    _plugin.onMessage(Connection, Data)
+    _plugin.onMessage(Connection, Data, Status, Extra)
 
 def onCommand(Unit, Command, Level, Hue):
     global _plugin
