@@ -68,9 +68,10 @@ class BasePlugin:
                 Domoticz.Device(Name=aLight['Name'], Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=devID).Create()
                 self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                 i=i+1
-                Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
-                self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
-                i=i+1
+                if aLight['HasWB'] == True:
+                    Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
+                    self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
+                    i=i+1
 
         #Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -145,9 +146,10 @@ class BasePlugin:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
 
-    def onMessage(self, Connection, Data, Status, Extra):
+    #def onMessage(self, Connection, Data, Status, Extra):
+    def onMessage(self, Connection, Data):
         #Domoticz.Log("onMessage called")
-        #Domoticz.Log("Received: " + str(Data))
+        Domoticz.Log("Received: " + str(Data))
 
         command = json.loads(Data.decode("utf-8"))
 
@@ -165,7 +167,9 @@ class BasePlugin:
             if action == "deviceUpdate":
                 self.updateDeviceState(command['result'])
 
-
+        if command['status'] == "Failed":
+            Domoticz.Log("Command {0} failed with error: {1}.".format(command['action'],command['error']))
+            Domoticz.Log(str(command))
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType))
@@ -222,9 +226,9 @@ def onConnect(Connection, Status, Description):
     global _plugin
     _plugin.onConnect(Connection, Status, Description)
 
-def onMessage(Connection, Data, Status, Extra):
+def onMessage(Connection, Data):
     global _plugin
-    _plugin.onMessage(Connection, Data, Status, Extra)
+    _plugin.onMessage(Connection, Data)
 
 def onCommand(Unit, Command, Level, Hue):
     global _plugin

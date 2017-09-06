@@ -11,7 +11,7 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import api_factory
 
-version = "0.2"
+version = "0.3"
 verbose = False
 
 def verbosePrint(txt):
@@ -70,6 +70,48 @@ class CoapAdapter(TelnetProtocol):
         print("Disconnected")
         self.factory.clients.remove(self)
 
+class ikeaGroup():
+    deviceID = None
+    deviceName = None
+    lastState = None
+    lastLevel = None
+    factory = None
+
+    def __init__(self, factory, group):
+        self.deviceID = group.id
+        self.deviceName = group.name
+        self.lastState = group.state
+        self.lastLevel = group.dimmer
+        self.factory = factory
+
+    def hasChanged(self):
+        targetGroup = self.factory.api(self.factory.gateway.get_group(int(self.deviceID)))
+
+        curState = targetGroup.state
+        curLevel = targetGroup.dimmer
+
+        if (curState == self.lastState) and (curLevel == self.lastLevel):
+            return False
+        else:
+            self.lastState = curState
+            self.lastLevel = curLevel
+            return True
+        
+    def sendState(self, client):
+        devices = []
+        answer = {}
+        
+        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState, "Level": self.lastLevel})
+
+        answer["action"] = "deviceUpdate"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        verbosePrint(answer)
+
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+
 class ikeaLight():
 
     whiteTemps = {"cold":"f5faf6", "normal":"f1e0b5", "warm":"efd275"}
@@ -127,13 +169,14 @@ class ikeaLight():
         answer["status"] = "Ok"
         answer["result"] =  devices
 
-        print(answer)
+        verbosePrint(answer)
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
 class AdaptorFactory(ServerFactory):
 
     ikeaLights = {}
+    ikeaGroups = {}
 
     def __init__(self):
         self.clients = []
@@ -141,6 +184,7 @@ class AdaptorFactory(ServerFactory):
         self.api = None
         self.devices = None
         self.lights = None
+        self.groups = None
 
         self.lighStatus = {}
         self.lc = task.LoopingCall(self.announce)
@@ -153,6 +197,12 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
+
+        for key, aGroup in self.ikeaGroups.items():
+            if aGroup.hasChanged():
+                for client in self.clients:
+                        aGroup.sendState(client)
+
         try:
             for key, aDevice in self.ikeaLights.items():
                 if aDevice.hasChanged():
@@ -171,14 +221,25 @@ class AdaptorFactory(ServerFactory):
             connectedToGW = False
 
         if connectedToGW:
+<<<<<<< HEAD
             devices_command = self.gateway.get_devices()
             devices_commands = self.api(devices_command)
             self.devices = self.api(*devices_commands)
+=======
+            self.devices = self.api(*self.api(self.gateway.get_devices()))
+            self.groups = self.api(*self.api(self.gateway.get_groups()))
+>>>>>>> origin/development
         
             for dev in self.devices:
                 if dev.has_light_control:
                     self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
 
+<<<<<<< HEAD
+=======
+            for group in self.groups:
+                self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
+
+>>>>>>> origin/development
             if observe=="True":
                 if not self.lc.running:
                     self.lc.start(2)
@@ -196,27 +257,47 @@ class AdaptorFactory(ServerFactory):
 
         for key, aDevice in self.ikeaLights.items():
             # print (aDevice)
-            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName})
+            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Dimmer", "HasWB": True})
+
+        for key, aGroup in self.ikeaGroups.items():
+            #print (aGroup)
+            devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "HasWB": False})
+
 
         answer["action"] = "getLights"
         answer["status"] = "Ok"
         answer["result"] =  devices
 
+        verbosePrint(json.dumps(answer))
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         for aDev in self.ikeaLights:
             self.ikeaLights[aDev].sendState(client)
+
+        for aGroup in self.ikeaGroups:
+            self.ikeaGroups[aGroup].sendState(client)
 
     def setLevel(self, client, deviceID, level):
         answer = {}
         answer["action"] = "setLevel"
         answer["status"] = "Ok"
 
-        targetDeviceCommand = self.gateway.get_device(int(deviceID))
-        targetDevice = self.api(targetDeviceCommand)
+        setLevelCommand = None
+        deviceID=int(deviceID)
 
-        setLevelCommand = targetDevice.light_control.set_dimmer(level)
-        self.api(setLevelCommand)
+        if deviceID in self.ikeaLights.keys():
+            targetDeviceCommand = self.gateway.get_device(deviceID)
+            targetDevice = self.api(targetDeviceCommand)
+            setLevelCommand = targetDevice.light_control.set_dimmer(level)
+
+        if deviceID in self.ikeaGroups.keys():
+            targetDevice=self.api(self.gateway.get_group(deviceID))
+            setLevelCommand = targetDevice.set_dimmer(level)
+
+        if setLevelCommand != None:
+            self.api(setLevelCommand)
+        else:
+            answer["status"] = "Error"
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
@@ -225,17 +306,27 @@ class AdaptorFactory(ServerFactory):
         answer["action"] = "setState"
         answer["status"] = "Ok"
 
-        targetDeviceCommand = self.gateway.get_device(int(deviceID))
-        targetDevice = self.api(targetDeviceCommand)
+        setStateCommand = None
+        deviceID = int(deviceID)
 
         if state == "On":
-            setStateCommand = targetDevice.light_control.set_state(True)
+            state = True
 
         if state == "Off":
-            setStateCommand = targetDevice.light_control.set_state(False)
+            state = False
+
+        if deviceID in self.ikeaLights.keys():
+            # targetDeviceCommand = self.gateway.get_device(int(deviceID))
+            targetDevice = self.api(self.gateway.get_device(int(deviceID)))
+            setStateCommand = targetDevice.light_control.set_state(state)
+
+        if deviceID in self.ikeaGroups.keys():
+            # targetDeviceCommand = self.gateway.get_group(int(deviceID))
+            targetDevice = self.api(self.gateway.get_group(int(deviceID)))
+            print(targetDevice)
+            setStateCommand = targetDevice.set_state(state)
 
         self.api(setStateCommand)
-
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
     def setHex(self, client, deviceID, hex):
