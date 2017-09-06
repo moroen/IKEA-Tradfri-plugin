@@ -221,9 +221,7 @@ class AdaptorFactory(ServerFactory):
             connectedToGW = False
 
         if connectedToGW:
-            devices_command = self.gateway.get_devices()
-            devices_commands = self.api(devices_command)
-            self.devices = self.api(*devices_commands)
+            self.devices = self.api(*self.api(self.gateway.get_devices()))
             self.groups = self.api(*self.api(self.gateway.get_groups()))
         
             for dev in self.devices:
