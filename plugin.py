@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.3" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode1" label="Key" width="200px" required="true" default=""/>
@@ -40,8 +40,8 @@ class BasePlugin:
     outstandingPings = 0
     nextConnect = 3
 
-    whiteTemps = {0:"f5faf6", 10:"f1e0b5", 20:"efd275"}
-    hexLevels = {"f5faf6":0, "f1e0b5":10, "efd275":20}
+    whiteTemps = {0:"Off", 10:"f5faf6", 20:"f1e0b5", 30:"efd275"}
+    hexLevels = {"f5faf6":10, "f1e0b5":20, "efd275":30}
 
     def __init__(self):
         self.pluginStatus = 0
@@ -57,7 +57,7 @@ class BasePlugin:
         else:
             i=max(Devices)+1
 
-        WhiteOptions = {"LevelActions": "||", "LevelNames": "Cold|Normal|Warm", "LevelOffHidden": "false","SelectorStyle": "0"}
+        WhiteOptions = {"LevelActions": "|||", "LevelNames": "Off|Cold|Normal|Warm", "LevelOffHidden": "true","SelectorStyle": "0"}
 
         ikeaIds = []
         # Add unregistred lights
@@ -186,11 +186,18 @@ class BasePlugin:
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'))
 
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
+            # This is a WB-device
             hex = None
 
             devId = Devices[Unit].DeviceID.split(':')[0]
 
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
+            if Level==0:
+                #Off
+                Domoticz.Debug("Setting WB to off")
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId}).encode(encoding='utf_8'))
+
+            else:
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
             
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):

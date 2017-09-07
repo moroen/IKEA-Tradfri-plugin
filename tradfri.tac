@@ -239,8 +239,13 @@ class AdaptorFactory(ServerFactory):
                     self.lc.stop()
 
             client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
+        
+            self.announce()
+            
         else:
             client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
+
+        
 
     def sendDeviceList(self, client):
         devices = []
