@@ -65,7 +65,13 @@ class BasePlugin:
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
             if not devID in self.lights:
-                Domoticz.Device(Name=aLight['Name'], Unit=i,  TypeName="Switch", Switchtype=7, DeviceID=devID).Create()
+
+                if aLight['Dimmable']:
+                    thisSwitchType=7
+                else:
+                    thisSwitchType=0
+
+                Domoticz.Device(Name=aLight['Name'], Unit=i,  TypeName="Switch", Switchtype=thisSwitchType, DeviceID=devID).Create()
                 self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                 i=i+1
                 if aLight['HasWB'] == True:
@@ -197,7 +203,7 @@ class BasePlugin:
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId}).encode(encoding='utf_8'))
 
             else:
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setWB", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
             
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
