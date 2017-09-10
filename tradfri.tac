@@ -6,6 +6,8 @@ from twisted.application.service import Application
 
 import json
 import sys
+import configparser
+import os
 
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
@@ -14,9 +16,25 @@ from pytradfri.api.libcoap_api import api_factory
 version = "0.3"
 verbose = False
 
+INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
+deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
+
+deviceConfig = configparser.ConfigParser()
+
+if os.path.exists(INIFILE):
+    deviceConfig.read(INIFILE)
+
 def verbosePrint(txt):
     if verbose:
         print(txt)
+
+def stringToBool(boolString):
+    if boolString == "True":
+        return True
+    elif boolString == "False":
+        return False
+    else:
+        return None
 
 class CoapAdapter(TelnetProtocol):
     api = ""
@@ -59,8 +77,8 @@ class CoapAdapter(TelnetProtocol):
             if command['action']=="setState":
                 self.factory.setState(self, command["deviceID"], command["state"])
 
-            if command['action']=="setHex":
-                self.factory.setHex(self, command["deviceID"], command['hex'])
+            if command['action']=="setWB":
+                self.factory.setWB(self, command["deviceID"], command['hex'])
 
         # except:
         #    print("Error: Failed to parse JSON")
@@ -121,6 +139,7 @@ class ikeaLight():
     lastState = None
     lastLevel = None
     lastWB = None
+    modelNumber = None
 
     device = None
     factory = None
@@ -129,6 +148,7 @@ class ikeaLight():
         self.device = device
         self.deviceID = device.id
         self.deviceName = device.name
+        self.modelNumber = device.device_info.model_number
         self.lastState = device.light_control.lights[0].state
         self.lastLevel = device.light_control.lights[0].dimmer
         self.lastWB = device.light_control.lights[0].hex_color
@@ -245,20 +265,27 @@ class AdaptorFactory(ServerFactory):
         else:
             client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
-        
-
     def sendDeviceList(self, client):
         devices = []
         answer = {}
+        configChanged = False
 
         for key, aDevice in self.ikeaLights.items():
-            # print (aDevice)
-            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Dimmer", "HasWB": True})
+            # print (aDevice.modelNumber)
+            if not aDevice.modelNumber in deviceConfig:
+                print("Device settings ot found for {0}. Creating defaults!".format(aDevice.modelNumber))
+                deviceConfig[aDevice.modelNumber] = deviceDefaults
+                configChanged = True
+
+            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
 
         for key, aGroup in self.ikeaGroups.items():
             #print (aGroup)
-            devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "HasWB": False})
+            devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
 
+        if configChanged:
+            with open(INIFILE, "w") as configfile:
+                deviceConfig.write(configfile)
 
         answer["action"] = "getLights"
         answer["status"] = "Ok"
@@ -325,18 +352,18 @@ class AdaptorFactory(ServerFactory):
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-    def setHex(self, client, deviceID, hex):
+    def setWB(self, client, deviceID, hex):
         answer = {}
-        answer["action"] = "setHex"
+        answer["action"] = "setWB"
         answer["status"] = "Ok"
 
-        targetDeviceCommand = self.gateway.get_device(int(deviceID))
-        targetDevice = self.api(targetDeviceCommand)
+        deviceID = int(deviceID)
 
-        setHexCommand = targetDevice.light_control.set_hex_color(hex)
+        if deviceID in self.ikeaLights.keys():
+            targetDevice = self.api(self.gateway.get_device(int(deviceID)))
+            setStateCommand = targetDevice.light_control.set_hex_color(hex)
 
-        self.api(setHexCommand)
-
+        self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
 if __name__ == "__main__":
