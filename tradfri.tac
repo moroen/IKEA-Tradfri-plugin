@@ -102,11 +102,11 @@ class ikeaGroup():
         self.lastLevel = group.dimmer
         self.factory = factory
 
-    def hasChanged(self):
-        targetGroup = self.factory.api(self.factory.gateway.get_group(int(self.deviceID)))
+    def hasChanged(self, group):
+        # targetGroup = self.factory.api(self.factory.gateway.get_group(int(self.deviceID)))
 
-        curState = targetGroup.state
-        curLevel = targetGroup.dimmer
+        curState = group.state
+        curLevel = group.dimmer
 
         if (curState == self.lastState) and (curLevel == self.lastLevel):
             return False
@@ -153,17 +153,12 @@ class ikeaLight():
         self.lastLevel = device.light_control.lights[0].dimmer
         self.lastWB = device.light_control.lights[0].hex_color
         self.factory = factory
+ 
 
-
-    def hasChanged(self):
-        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
-        targetDevice = self.factory.api(targetDeviceCommand)
-
-        curState = targetDevice.light_control.lights[0].state
-        curLevel = targetDevice.light_control.lights[0].dimmer
-        curWB = targetDevice.light_control.lights[0].hex_color
-
-        # print ("Checking change for {0} lastState: {1} currentState: {2}".format(self.deviceName, self.lastState, curState))
+    def hasChanged(self, device):
+        curState = device.light_control.lights[0].state
+        curLevel = device.light_control.lights[0].dimmer
+        curWB = device.light_control.lights[0].hex_color
 
         if (curState == self.lastState) and (curLevel == self.lastLevel) and (curWB == self.lastWB):
             return False
@@ -176,14 +171,12 @@ class ikeaLight():
     def sendState(self, client):
         devices = []
         answer = {}
-        targetDeviceCommand = self.factory.gateway.get_device(int(self.deviceID))
-        targetDevice = self.factory.api(targetDeviceCommand)
-
-        targetLevel = targetDevice.light_control.lights[0].dimmer
+       
+        targetLevel = self.lastLevel
         if targetLevel == None:
             targetLevel = 0
 
-        devices.append({"DeviceID": targetDevice.id, "Name": targetDevice.name, "State": targetDevice.light_control.lights[0].state, "Level": targetLevel, "Hex": targetDevice.light_control.lights[0].hex_color})
+        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState, "Level": targetLevel, "Hex": self.lastWB})
 
         answer["action"] = "deviceUpdate"
         answer["status"] = "Ok"
@@ -197,6 +190,9 @@ class AdaptorFactory(ServerFactory):
 
     ikeaLights = {}
     ikeaGroups = {}
+
+    devices = None
+    groups = None
 
     def __init__(self):
         self.clients = []
@@ -217,19 +213,35 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
+        #try:
+            # for key, aGroup in self.ikeaGroups.items():
+            #     if aGroup.hasChanged():
+            #         for client in self.clients:
+            #                 aGroup.sendState(client)
 
-        for key, aGroup in self.ikeaGroups.items():
-            if aGroup.hasChanged():
-                for client in self.clients:
-                        aGroup.sendState(client)
+        
+            # for key, aDevice in self.ikeaLights.items():
+            #     if aDevice.hasChanged():
+            #         for client in self.clients:
+            #             aDevice.sendState(client)
 
-        try:
-            for key, aDevice in self.ikeaLights.items():
-                if aDevice.hasChanged():
+        self.devices = self.api(*self.api(self.gateway.get_devices()))
+        self.groups = self.api(*self.api(self.gateway.get_groups()))
+
+        for dev in self.devices:
+            if dev.has_light_control:
+                if self.ikeaLights[dev.id].hasChanged(dev):
                     for client in self.clients:
-                        aDevice.sendState(client)
-        except Exception as e: 
-            print(e)
+                        self.ikeaLights[dev.id].sendState(client)
+
+        for group in self.groups:
+            if self.ikeaGroups[group.id].hasChanged(group):
+                for client in self.clients:
+                    self.ikeaGroups[group.id].sendState(client)
+                
+
+        #except Exception as e: 
+        #    print("Error in annouce: {0}".format(e))
 
     def initGateway(self, client, ip, key, observe):
         connectedToGW = False
