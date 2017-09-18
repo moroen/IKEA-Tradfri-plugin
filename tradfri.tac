@@ -213,35 +213,22 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announce(self):
-        #try:
-            # for key, aGroup in self.ikeaGroups.items():
-            #     if aGroup.hasChanged():
-            #         for client in self.clients:
-            #                 aGroup.sendState(client)
+        try:
+            self.devices = self.api(*self.api(self.gateway.get_devices()))
+            self.groups = self.api(*self.api(self.gateway.get_groups()))
 
-        
-            # for key, aDevice in self.ikeaLights.items():
-            #     if aDevice.hasChanged():
-            #         for client in self.clients:
-            #             aDevice.sendState(client)
+            for dev in self.devices:
+                if dev.has_light_control:
+                    if self.ikeaLights[dev.id].hasChanged(dev):
+                        for client in self.clients:
+                            self.ikeaLights[dev.id].sendState(client)
 
-        self.devices = self.api(*self.api(self.gateway.get_devices()))
-        self.groups = self.api(*self.api(self.gateway.get_groups()))
-
-        for dev in self.devices:
-            if dev.has_light_control:
-                if self.ikeaLights[dev.id].hasChanged(dev):
+            for group in self.groups:
+                if self.ikeaGroups[group.id].hasChanged(group):
                     for client in self.clients:
-                        self.ikeaLights[dev.id].sendState(client)
-
-        for group in self.groups:
-            if self.ikeaGroups[group.id].hasChanged(group):
-                for client in self.clients:
-                    self.ikeaGroups[group.id].sendState(client)
-                
-
-        #except Exception as e: 
-        #    print("Error in annouce: {0}".format(e))
+                        self.ikeaGroups[group.id].sendState(client)
+        except Exception as e: 
+            print("Error in annouce: {0}".format(e))
 
     def initGateway(self, client, ip, key, observe):
         connectedToGW = False
