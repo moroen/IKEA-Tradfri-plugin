@@ -348,8 +348,14 @@ class AdaptorFactory(ServerFactory):
             print(targetDevice)
             setStateCommand = targetDevice.set_state(state)
 
-        self.api(setStateCommand)
+        try:
+            self.api(setStateCommand)
+        except Exception as e:
+            print("Failed to set state")
+            answer["status"]="Failed"
+        
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
 
     def setWB(self, client, deviceID, hex):
         answer = {}
