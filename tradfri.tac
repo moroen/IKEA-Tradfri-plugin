@@ -371,11 +371,24 @@ class AdaptorFactory(ServerFactory):
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
+
+
+currentError = False
+
+def error(f):
+    global currentError
+    print (f.getErrorMessage())
+    currentError = True
+    
 if __name__ == "__main__":
-    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!\nWaiting for connection".format(version))
+    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!".format(version))
     verbose = True
-    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())
-    reactor.run()
+    
+    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory()).addErrback(error)
+    
+    if not currentError:
+        reactor.run()
+    
 else:
     factory = AdaptorFactory()
     service = TCPServer(1234, factory)
