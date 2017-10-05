@@ -245,13 +245,19 @@ class AdaptorFactory(ServerFactory):
             self.devices = self.api(*self.api(self.gateway.get_devices()))
             self.groups = self.api(*self.api(self.gateway.get_groups()))
         
-            for dev in self.devices:
-                if dev.has_light_control:
-                    self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
+            try:
+                for dev in self.devices:
+                    if dev.has_light_control:
+                        self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
+            except Exception as e:
+                print("Unable to iterate devices")
 
-            for group in self.groups:
-                self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
-
+            try:
+                for group in self.groups:
+                    self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
+            except Exception as e:
+                print("Unable to iterate groups")
+            
             self.observe = observe
 
             if observe=="True":
