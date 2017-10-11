@@ -24,6 +24,13 @@ deviceConfig = configparser.ConfigParser()
 if os.path.exists(INIFILE):
     deviceConfig.read(INIFILE)
 
+currentError = False
+
+def error(f):
+    global currentError
+    print (f.getErrorMessage())
+    currentError = True
+
 def verbosePrint(txt):
     if verbose:
         print(txt)
@@ -126,9 +133,10 @@ class ikeaGroup():
         answer["result"] =  devices
 
         verbosePrint(answer)
-
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-
+        try:
+            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        except Exception as e:
+            print("Error sending group state")
 
 class ikeaLight():
 
@@ -183,8 +191,10 @@ class ikeaLight():
         answer["result"] =  devices
 
         verbosePrint(answer)
-
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        try:
+            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        except Exception as e:
+            print("Error sending light state")
 
 class AdaptorFactory(ServerFactory):
 
@@ -230,7 +240,7 @@ class AdaptorFactory(ServerFactory):
                     for client in self.clients:
                         self.ikeaGroups[group.id].sendState(client)
         except Exception as e: 
-            print("Error in annouce: {0}".format(e))
+            print("Error in annouce: {0}:{1}".format(e, e.message))
 
     def initGateway(self, client, ip, key, observe):
         connectedToGW = False
@@ -397,14 +407,6 @@ class AdaptorFactory(ServerFactory):
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-
-
-currentError = False
-
-def error(f):
-    global currentError
-    print (f.getErrorMessage())
-    currentError = True
     
 if __name__ == "__main__":
     print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!".format(version))
@@ -420,9 +422,3 @@ else:
     service = TCPServer(1234, factory)
     application = Application("IKEA Tradfri Adaptor")
     service.setServiceParent(application)
-
-def start_reactor():
-    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!\nWaiting for connection".format(version))
-    verbose = True
-    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory())
-    reactor.run()
