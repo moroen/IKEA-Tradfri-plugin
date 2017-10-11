@@ -32,6 +32,7 @@ $ python3 setup.py install
 ```
 $ pip3 install twisted
 ```
+Note: Dpending on setup, it might be necessary to install twisted using sudo.
 
 ### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
