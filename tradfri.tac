@@ -73,7 +73,7 @@ class CoapAdapter(TelnetProtocol):
         for command in commands:
             if command['action']=="setConfig":
                 # print("Setting config")
-                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'])
+                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['groups'])
 
             if command['action']=="getLights":
                 self.factory.sendDeviceList(self)
@@ -205,6 +205,7 @@ class AdaptorFactory(ServerFactory):
     groups = None
 
     observe = False
+    groups = False
 
     def __init__(self):
         self.clients = []
@@ -227,7 +228,8 @@ class AdaptorFactory(ServerFactory):
     def announce(self):
         try:
             self.devices = self.api(*self.api(self.gateway.get_devices()))
-            self.groups = self.api(*self.api(self.gateway.get_groups()))
+            if self.groups:
+                self.groups = self.api(*self.api(self.gateway.get_groups()))
 
             for dev in self.devices:
                 if dev.has_light_control:
@@ -235,15 +237,28 @@ class AdaptorFactory(ServerFactory):
                         for client in self.clients:
                             self.ikeaLights[dev.id].sendState(client)
 
-            for group in self.groups:
-                if self.ikeaGroups[group.id].hasChanged(group):
-                    for client in self.clients:
-                        self.ikeaGroups[group.id].sendState(client)
+            if self.groups:
+                for group in self.groups:
+                    if self.ikeaGroups[group.id].hasChanged(group):
+                        for client in self.clients:
+                            self.ikeaGroups[group.id].sendState(client)
         except Exception as e: 
             print("Error in annouce: {0}:{1}".format(e, e.message))
 
-    def initGateway(self, client, ip, key, observe):
+    def initGateway(self, client, ip, key, observe, groups):
         connectedToGW = False
+
+        if observe=="True":
+            self.observe = True
+        else:
+            self.observe = False
+
+        if groups=="True":
+            self.groups = True
+        else:
+            self.groups = False
+
+    
         try:
             self.api = api_factory(ip, key)
             self.gateway = Gateway()
@@ -253,7 +268,8 @@ class AdaptorFactory(ServerFactory):
 
         if connectedToGW:
             self.devices = self.api(*self.api(self.gateway.get_devices()))
-            self.groups = self.api(*self.api(self.gateway.get_groups()))
+            if self.groups:
+                self.groups = self.api(*self.api(self.gateway.get_groups()))
         
             try:
                 for dev in self.devices:
@@ -262,17 +278,16 @@ class AdaptorFactory(ServerFactory):
             except Exception as e:
                 print("Unable to iterate devices")
 
-            try:
-                for group in self.groups:
-                    self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
-            except Exception as e:
-                print("Unable to iterate groups")
-            
-            self.observe = observe
-
-            if observe=="True":
+            if self.groups:
+                try:
+                    for group in self.groups:
+                        self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
+                except Exception as e:
+                    print("Unable to iterate groups")
+                
+            if self.observe:
                 if not self.lc.running:
-                    self.lc.start(2)
+                    self.lc.start(4)
             else:
                 if self.lc.running:
                     self.lc.stop()
@@ -281,6 +296,8 @@ class AdaptorFactory(ServerFactory):
         
             # Send inital state
             self.announce()
+
+            
             
         else:
             client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
@@ -299,9 +316,10 @@ class AdaptorFactory(ServerFactory):
 
             devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
 
-        for key, aGroup in self.ikeaGroups.items():
-            #print (aGroup)
-            devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
+        if self.groups:
+            for key, aGroup in self.ikeaGroups.items():
+                #print (aGroup)
+                devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
 
         if configChanged:
             with open(INIFILE, "w") as configfile:
@@ -317,8 +335,9 @@ class AdaptorFactory(ServerFactory):
         for aDev in self.ikeaLights:
             self.ikeaLights[aDev].sendState(client)
 
-        for aGroup in self.ikeaGroups:
-            self.ikeaGroups[aGroup].sendState(client)
+        if self.groups:
+            for aGroup in self.ikeaGroups:
+                self.ikeaGroups[aGroup].sendState(client)
 
     def setLevel(self, client, deviceID, level):
         answer = {}
@@ -337,10 +356,11 @@ class AdaptorFactory(ServerFactory):
             setLevelCommand = targetDevice.light_control.set_dimmer(level)
             target = self.ikeaLights[deviceID]
 
-        if deviceID in self.ikeaGroups.keys():
-            targetDevice=self.api(self.gateway.get_group(deviceID))
-            setLevelCommand = targetDevice.set_dimmer(level)
-            target = self.ikeaGroups[deviceID]
+        if self.groups:
+            if deviceID in self.ikeaGroups.keys():
+                targetDevice=self.api(self.gateway.get_group(deviceID))
+                setLevelCommand = targetDevice.set_dimmer(level)
+                target = self.ikeaGroups[deviceID]
 
         if setLevelCommand != None:
             self.api(setLevelCommand)
@@ -349,7 +369,7 @@ class AdaptorFactory(ServerFactory):
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
   
-        if self.observe=="False":
+        if not self.observe:
             self.announce()
 
 
@@ -375,12 +395,13 @@ class AdaptorFactory(ServerFactory):
             setStateCommand = targetDevice.light_control.set_state(state)
             target = self.ikeaLights[deviceID]
 
-        if deviceID in self.ikeaGroups.keys():
-            # targetDeviceCommand = self.gateway.get_group(int(deviceID))
-            targetDevice = self.api(self.gateway.get_group(int(deviceID)))
-            print(targetDevice)
-            setStateCommand = targetDevice.set_state(state)
-            target = self.ikeaGroups[deviceID]
+        if self.groups:
+            if deviceID in self.ikeaGroups.keys():
+                # targetDeviceCommand = self.gateway.get_group(int(deviceID))
+                targetDevice = self.api(self.gateway.get_group(int(deviceID)))
+                print(targetDevice)
+                setStateCommand = targetDevice.set_state(state)
+                target = self.ikeaGroups[deviceID]
 
         try:
             self.api(setStateCommand)
@@ -390,7 +411,7 @@ class AdaptorFactory(ServerFactory):
         
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        if self.observe=="False":
+        if not self.observe:
             self.announce()
 
     def setWB(self, client, deviceID, hex):
