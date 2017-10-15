@@ -73,7 +73,7 @@ class CoapAdapter(TelnetProtocol):
         for command in commands:
             if command['action']=="setConfig":
                 # print("Setting config")
-                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['groups'])
+                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
 
             if command['action']=="getLights":
                 self.factory.sendDeviceList(self)
@@ -245,7 +245,7 @@ class AdaptorFactory(ServerFactory):
         except Exception as e: 
             print("Error in annouce: {0}:{1}".format(e, e.message))
 
-    def initGateway(self, client, ip, key, observe, groups):
+    def initGateway(self, client, ip, key, observe, interval, groups):
         connectedToGW = False
 
         if observe=="True":
@@ -258,7 +258,6 @@ class AdaptorFactory(ServerFactory):
         else:
             self.groups = False
 
-    
         try:
             self.api = api_factory(ip, key)
             self.gateway = Gateway()
@@ -284,21 +283,16 @@ class AdaptorFactory(ServerFactory):
                         self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
                 except Exception as e:
                     print("Unable to iterate groups")
-                
+
             if self.observe:
                 if not self.lc.running:
-                    self.lc.start(4)
+                    self.lc.start(int(interval))
             else:
                 if self.lc.running:
                     self.lc.stop()
+                self.announce()
 
-            client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))
-        
-            # Send inital state
-            self.announce()
-
-            
-            
+            client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))        
         else:
             client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
@@ -310,7 +304,7 @@ class AdaptorFactory(ServerFactory):
         for key, aDevice in self.ikeaLights.items():
             # print (aDevice.modelNumber)
             if not aDevice.modelNumber in deviceConfig:
-                print("Device settings ot found for {0}. Creating defaults!".format(aDevice.modelNumber))
+                verboseprint("Device settings ot found for {0}. Creating defaults!".format(aDevice.modelNumber))
                 deviceConfig[aDevice.modelNumber] = deviceDefaults
                 configChanged = True
 
@@ -369,9 +363,7 @@ class AdaptorFactory(ServerFactory):
 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
   
-        if not self.observe:
-            self.announce()
-
+        self.announce()
 
     def setState(self, client, deviceID, state):
         answer = {}
@@ -390,16 +382,13 @@ class AdaptorFactory(ServerFactory):
             state = False
 
         if deviceID in self.ikeaLights.keys():
-            # targetDeviceCommand = self.gateway.get_device(int(deviceID))
             targetDevice = self.api(self.gateway.get_device(int(deviceID)))
             setStateCommand = targetDevice.light_control.set_state(state)
             target = self.ikeaLights[deviceID]
 
         if self.groups:
             if deviceID in self.ikeaGroups.keys():
-                # targetDeviceCommand = self.gateway.get_group(int(deviceID))
                 targetDevice = self.api(self.gateway.get_group(int(deviceID)))
-                print(targetDevice)
                 setStateCommand = targetDevice.set_state(state)
                 target = self.ikeaGroups[deviceID]
 
@@ -411,8 +400,7 @@ class AdaptorFactory(ServerFactory):
         
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        if not self.observe:
-            self.announce()
+        self.announce()
 
     def setWB(self, client, deviceID, hex):
         answer = {}
@@ -427,6 +415,8 @@ class AdaptorFactory(ServerFactory):
 
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+        self.announce()
 
     
 if __name__ == "__main__":

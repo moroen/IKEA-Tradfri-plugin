@@ -15,6 +15,8 @@
             </options>
         </param>
 
+        <param field="Mode4" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
+
         <param field="Mode3" label="Add groups as devices" width="75px">
             <options>
                 <option label="Yes" value="True"/>
@@ -143,7 +145,7 @@ class BasePlugin:
             for aUnit in Devices:
                 self.lights[Devices[aUnit].DeviceID] = {"DeviceID": Devices[aUnit].DeviceID, "Unit": aUnit}
 
-        self.connectToAdaptor();
+        self.connectToAdaptor()
 
     def onStop(self):
         #Domoticz.Log("onStop called")
@@ -154,7 +156,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
