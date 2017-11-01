@@ -12,9 +12,12 @@ RUN python3 -m pip install cython
 RUN python3 -m pip install ipython
 
 RUN git clone https://github.com/ggravlingen/pytradfri.git
+WORKDIR /usr/src/build/pytradfri
+RUN git checkout tags/2.2.3
 WORKDIR /usr/src/build/pytradfri/script
-RUN ./install-aiocoap.sh
-# RUN ./install-coap-client.sh
+# RUN chmod +x install-aiocoap.sh
+# RUN ./install-aiocoap.sh
+RUN ./install-coap-client.sh
 
 WORKDIR /usr/src/build/pytradfri
 RUN python3 setup.py install
@@ -22,5 +25,7 @@ RUN python3 setup.py install
 RUN pip3 install twisted
 
 WORKDIR /usr/src/app
+COPY tradfri.tac /usr/src/app
+
 EXPOSE 1234
 CMD python3 tradfri.tac
