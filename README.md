@@ -13,7 +13,7 @@ The repository contains two primary branches. The 'master' branch is targeted at
 3. Twisted (https://twistedmatrix.com/trac/)
 3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
-## Installation
+## Local Installation
 ### 1. Install libcoap as per ggravlingen's description
 ### 2. Install pytradfri-library 
 ```shell
@@ -62,6 +62,28 @@ $ sudo systemctl enable ikea-tradfri.service
 
 ### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
 To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page.
+
+## Docker Installation
+
+To run the plugin in a Docker (for example to on a Synology NAS), package the adapter using the provided Docker build file:
+```
+docker build -t ikea-tradfri-plugin:latest .
+```
+
+Copy the docker image to the system running Domoticz and start the Docker instance:
+```
+docker run -t -p 127.0.0.1:1234:1234 ikea-tradfri-plugin:1234
+```
+
+Now the IKEA Tradfri to Domoticz adaptor is available on the localhost.
+
+Clone IKEA-tradfri plugin into Domoticz plugins-directory
+```
+~/$ cd /opt/domoticz/plugins/
+/opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
+```
+
+Restart Domoticz and the plugin should show up. When the plugin is loaded, the adaptor running in the Docker is automatically used.
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
