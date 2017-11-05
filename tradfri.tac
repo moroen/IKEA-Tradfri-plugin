@@ -11,9 +11,9 @@ import os
 
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
-from pytradfri.api.libcoap_api import api_factory
+from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.4"
+version = "0.5"
 verbose = False
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
@@ -73,7 +73,8 @@ class CoapAdapter(TelnetProtocol):
         for command in commands:
             if command['action']=="setConfig":
                 # print("Setting config")
-                self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
+                self.factory.initGateway(self, command)
+                #self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
 
             if command['action']=="getLights":
                 self.factory.sendDeviceList(self)
@@ -227,9 +228,9 @@ class AdaptorFactory(ServerFactory):
 
     def announce(self):
         try:
-            self.devices = self.api(*self.api(self.gateway.get_devices()))
+            self.devices = self.api(self.api(self.gateway.get_devices()))
             if self.groups:
-                self.groups = self.api(*self.api(self.gateway.get_groups()))
+                self.groups = self.api(self.api(self.gateway.get_groups()))
 
             for dev in self.devices:
                 if dev.has_light_control:
@@ -245,30 +246,36 @@ class AdaptorFactory(ServerFactory):
         except Exception as e: 
             print("Error in annouce: {0}:{1}".format(e, e.message))
 
-    def initGateway(self, client, ip, key, observe, interval, groups):
+    #def initGateway(self, client, ip, key, observe, interval, groups):
+    def initGateway(self, client, command):
+        verbosePrint("Initializing gateway")
         connectedToGW = False
 
-        if observe=="True":
+        if command['observe']=="True":
             self.observe = True
         else:
             self.observe = False
 
-        if groups=="True":
+        if command['groups']=="True":
             self.groups = True
         else:
             self.groups = False
 
-        try:
-            self.api = api_factory(ip, key)
-            self.gateway = Gateway()
-            connectedToGW = True
-        except:
-            connectedToGW = False
+        #try:
+        api_factory = APIFactory(command['gateway'], command['identity'], command['psk'])
+ 
+        self.api = api_factory.request
+        self.gateway = Gateway()
+        
+        connectedToGW = True
+        #except:
+        #    connectedToGW = False
 
         if connectedToGW:
-            self.devices = self.api(*self.api(self.gateway.get_devices()))
+            self.devices = self.api(self.api(self.gateway.get_devices()))
+            #self.devices = self.api(self.api(self.gateway.get_devices()))
             if self.groups:
-                self.groups = self.api(*self.api(self.gateway.get_groups()))
+                self.groups = self.api(self.api(self.gateway.get_groups()))
         
             try:
                 for dev in self.devices:
@@ -286,7 +293,7 @@ class AdaptorFactory(ServerFactory):
 
             if self.observe:
                 if not self.lc.running:
-                    self.lc.start(int(interval))
+                    self.lc.start(int(command['pollinterval']))
             else:
                 if self.lc.running:
                     self.lc.stop()

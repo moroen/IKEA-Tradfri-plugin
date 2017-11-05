@@ -3,11 +3,12 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.4" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
-        <param field="Mode1" label="Key" width="200px" required="true" default=""/>
-
+        <param field="Mode5" label="Identity" with="200px" required="true" default=""/> 
+        <param field="Mode1" label="PSK" width="200px" required="true" default=""/>
+        
         <param field="Mode2" label="Observe changes" width="75px">
             <options>
                 <option label="Yes" value="True"/>
@@ -36,6 +37,31 @@
 """
 import Domoticz
 import json
+
+COLOR_NAMES = {
+    '4a418a': 'Blue',
+    '6c83ba': 'Light Blue',
+    '8f2686': 'Saturated Purple',
+    'a9d62b': 'Lime',
+    'c984bb': 'Light Purple',
+    'd6e44b': 'Yellow',
+    'd9337c': 'Saturated Pink',
+    'da5d41': 'Dark Peach',
+    'dc4b31': 'Saturated Red',
+    'dcf0f8': 'Cold sky',
+    'e491af': 'Pink',
+    'e57345': 'Peach',
+    'e78834': 'Warm Amber',
+    'e8bedd': 'Light Pink',
+    'eaf6fb': 'Cool daylight',
+    'ebb63e': 'Candlelight',
+    'efd275': 'Warm glow',
+    'f1e0b5': 'Warm white',
+    'f2eccf': 'Sunrise',
+    'f5faf6': 'Cool white'
+}
+
+colorOption=""
 
 class BasePlugin:
     #enabled = False
@@ -67,22 +93,42 @@ class BasePlugin:
             i=max(Devices)+1
 
         WhiteOptions = {"LevelActions": "|||", "LevelNames": "Off|Cold|Normal|Warm", "LevelOffHidden": "true","SelectorStyle": "0"}
+        colorOptions = {"LevelActions": "|||||||||||||||||||", "LevelNames": "Blue|Light Blue|Saturated Purple|Lime|Light Purple|Yellow|Saturated Pink|Dark Peach|Saturated Red|Cold sky|Pink|Peach|Warm Amber|Light Pink|Cool daylight|Candlelight|Warm glow|Warm white|Sunrise|Cool white", "LevelOffHidden": "false", "SelectorStyle": "1"}
+
 
         ikeaIds = []
         # Add unregistred lights
         for aLight in ikeaDevices:
+            Domoticz.Debug ("Regisering: {0}".format(json.dumps(aLight)))
+
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
+
+            if not "HasRGB" in aLight:
+                aLight["HasRGB"] = False
+
             if not devID in self.lights:
+                deviceType = 244
+                subType = 73
 
                 if aLight['Dimmable']:
-                    thisSwitchType=7
+                    switchType=7
                 else:
-                    thisSwitchType=0
+                    switchType=0
 
-                Domoticz.Device(Name=aLight['Name'], Unit=i,  TypeName="Switch", Switchtype=thisSwitchType, DeviceID=devID).Create()
+                #if "HasRGB" in aLight:
+                #    if aLight['HasRGB']:
+                #        deviceType = 241
+                #        subType=1
+
+                if aLight["HasRGB"]:
+                    Domoticz.Device(Name=aLight['Name'] + " - RGB",  Unit=i, TypeName="Selector Switch", Switchtype=7, Options=colorOptions, DeviceID=devID).Create()
+                else:
+                    Domoticz.Device(Name=aLight['Name'], Unit=i,  Type=deviceType, Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
+            
                 self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                 i=i+1
+
                 if aLight['HasWB'] == True:
                     Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
                     self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
@@ -99,7 +145,6 @@ class BasePlugin:
                 Devices[aUnit].Delete()
 
     def updateDeviceState(self, deviceState):
-
         for aDev in deviceState:
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
@@ -156,7 +201,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "key": Parameters["Mode1"], "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "identity": Parameters["Mode5"], "psk": Parameters["Mode1"], "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
@@ -187,7 +232,7 @@ class BasePlugin:
             Domoticz.Log(str(command))
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType))
+        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType)+" Hue: "+str(Hue))
 
         if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
             if Command=="On":
@@ -213,7 +258,10 @@ class BasePlugin:
 
             else:
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setWB", "deviceID": devId, "hex": self.whiteTemps[Level] }).encode(encoding='utf_8'))
-            
+
+        if (Devices[Unit].Type == 241) and (Devices[Unit].SubType == 1):
+            # This is a RGB-Device
+            Domoticz.Debug("RGB - Command: {0} Level: {1} Hue: {2}".format(Command, Level, Hue))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
