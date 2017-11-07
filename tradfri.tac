@@ -85,8 +85,8 @@ class CoapAdapter(TelnetProtocol):
             if command['action']=="setState":
                 self.factory.setState(self, command["deviceID"], command["state"])
 
-            if command['action']=="setWB":
-                self.factory.setWB(self, command["deviceID"], command['hex'])
+            if command['action']=="setHex":
+                self.factory.setHex(self, command["deviceID"], command['hex'])
 
         # except:
         #    print("Error: Failed to parse JSON")
@@ -409,9 +409,9 @@ class AdaptorFactory(ServerFactory):
 
         self.announce()
 
-    def setWB(self, client, deviceID, hex):
+    def setHex(self, client, deviceID, hex):
         answer = {}
-        answer["action"] = "setWB"
+        answer["action"] = "setHex"
         answer["status"] = "Ok"
 
         deviceID = int(deviceID)
