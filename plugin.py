@@ -196,7 +196,7 @@ class BasePlugin:
     def onMessage(self, Connection, Data, Status, Extra):
     #def onMessage(self, Connection, Data):
         #Domoticz.Log("onMessage called")
-        Domoticz.Log("Received: " + str(Data))
+        Domoticz.Debug("Received: " + str(Data))
 
         command = json.loads(Data.decode("utf-8"))
 
