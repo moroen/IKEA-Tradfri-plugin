@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode5" label="Identity" with="200px" required="true" default=""/> 
@@ -140,25 +140,17 @@ class BasePlugin:
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
-            #if devID+":CWS" in self.lights:
-            #    targetUnit = self.lights[devID+":CWS"]['Unit']
-            #    Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
-
             if "Hex" in aDev:
                 if aDev["Hex"] != None:
                     if devID+":WB" in self.lights:
                         wbdevID = devID+":WB"
                         targetUnit = self.lights[wbdevID]['Unit']
-                        targetLevel = colors.wbLevelForHex(aDev['Hex'])
+                        Devices[targetUnit].Update(nValue=nVal, sValue=str(colors.wbLevelForHex(aDev['Hex'])))
 
                     if devID+":CWS" in self.lights:
                         wbdevID = devID+":CWS"
                         targetUnit = self.lights[wbdevID]['Unit']
-                        targetLevel = colors.colorLevelForHex(aDev['Hex'])
-                    
-                    Domoticz.Debug("Hex: "+aDev["Hex"]+" Target Unit: "+str(targetUnit)+" Target level: "+str(targetLevel))
-                    
-                    Devices[targetUnit].Update(nValue=nVal, sValue=str(targetLevel))
+                        Devices[targetUnit].Update(nValue=nVal, sValue=str(colors.colorLevelForHex(aDev['Hex'])))
 
     def connectToAdaptor(self):
         self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
@@ -194,10 +186,7 @@ class BasePlugin:
         return True
 
     def onMessage(self, Connection, Data, Status, Extra):
-    #def onMessage(self, Connection, Data):
-        #Domoticz.Log("onMessage called")
-        Domoticz.Debug("Received: " + str(Data))
-
+        #Domoticz.Debug("Received: " + str(Data))
         command = json.loads(Data.decode("utf-8"))
 
         #Domoticz.Log("Command: " + command['action'])
@@ -236,13 +225,11 @@ class BasePlugin:
             # This is a WB-device
             hex = None
 
-
             # [0] is the DeviceID [1] is the subType (WB/CWS)
             devId = Devices[Unit].DeviceID.split(':')
             
             if Level==0:
                 #Off
-                Domoticz.Debug("Setting WB to off")
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
 
             else:
@@ -251,9 +238,9 @@ class BasePlugin:
                 if devId[1] == "CWS":
                     self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
 
-        if (Devices[Unit].Type == 241) and (Devices[Unit].SubType == 1):
-            # This is a RGB-Device
-            Domoticz.Debug("RGB - Command: {0} Level: {1} Hue: {2}".format(Command, Level, Hue))
+        # if (Devices[Unit].Type == 241) and (Devices[Unit].SubType == 1):
+        #     # This is a RGB-Device
+        #     Domoticz.Debug("RGB - Command: {0} Level: {1} Hue: {2}".format(Command, Level, Hue))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
