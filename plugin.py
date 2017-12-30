@@ -185,7 +185,6 @@ class BasePlugin:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
 
-    #def onMessage(self, Connection, Data, Status, Extra):
     def onMessage(self, Connection, Data):
         #Domoticz.Debug("Received: " + str(Data))
         command = json.loads(Data.decode("utf-8"))
