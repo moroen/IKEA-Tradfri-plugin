@@ -13,7 +13,7 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.5"
+version = "0.6"
 verbose = False
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
@@ -356,18 +356,23 @@ class AdaptorFactory(ServerFactory):
             targetDevice = self.api(targetDeviceCommand)
             setLevelCommand = targetDevice.light_control.set_dimmer(level)
             target = self.ikeaLights[deviceID]
+            # Set
+            self.api(setLevelCommand)
 
         if self.groups:
             if deviceID in self.ikeaGroups.keys():
-                targetDevice=self.api(self.gateway.get_group(deviceID))
+                # First set level
+                targetDevice=self.api(self.gateway.get_group(int(deviceID)))
                 setLevelCommand = targetDevice.set_dimmer(level)
                 target = self.ikeaGroups[deviceID]
+                self.api(setLevelCommand)
 
-        if setLevelCommand != None:
-            self.api(setLevelCommand)
-        else:
-            answer["status"] = "Error"
-
+                # Then switch the group on
+             
+                setStateCommand = targetDevice.set_state(True)
+                target = self.ikeaGroups[deviceID]
+                self.api(setStateCommand)
+                
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
   
         self.announce()
