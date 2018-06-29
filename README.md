@@ -8,13 +8,13 @@ Since domoticz plugins doesn't support COAP and also doesn't allow threads or as
 The repository contains two primary branches. The 'master' branch is targeted at the master branch of domoticz, which should be the latest stable. The development branch tracks the domoticz developement branch (aka. latest beta), where the plugin interface still is in flux.
 
 ## Requirements:
-1. Domoticz compiled with support for Python-Plugins / lastest beta
+1. [Domoticz](https://www.domoticz.com/wiki/Using_Python_plugins) compiled with support for Python-Plugins / latest beta
 2. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri). Required version: 4.0.2 or greater.
 3. Twisted (https://twistedmatrix.com/trac/)
 3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
 ## Local Installation
-### 1. Install libcoap as per ggravlingen's description
+### 1. Install libcoap as per [ggravlingen's description](https://github.com/ggravlingen/pytradfri)
 ### 2a. Install pytradfri-library 
 ```shell
   $ pip3 install pytradfri
@@ -32,7 +32,7 @@ $ python3 setup.py install
 ```
 $ pip3 install twisted
 ```
-Note: Dpending on setup, it might be necessary to install twisted using sudo.
+Note: Depending on setup, it might be necessary to install twisted using sudo.
 
 ### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
@@ -44,7 +44,7 @@ Note: Dpending on setup, it might be necessary to install twisted using sudo.
 ```
 ~/$ coap-client -m post -u "Client_identity" -k "GATEWAY-KEY" -e '{"9090":"IDENT"}' "coaps://IP:5684/15011/9063"
 ```
-where GATEWAY-KEY is the security-key located on the bottom of the gateway, IDENT is the desired identifikation-name, and IP the address of the gateway.
+where GATEWAY-KEY is the security-key located on the bottom of the gateway, IDENT is the desired identification name, and IP the address of the gateway.
 
 A sucessfull call will return the preshared key (PSK) for IDENT:
 ```
