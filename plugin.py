@@ -187,7 +187,9 @@ class BasePlugin:
 
     def onMessage(self, Connection, Data):
         #Domoticz.Debug("Received: " + str(Data))
-        command = json.loads(Data.decode("utf-8"))
+        #command = json.loads(Data.decode("utf-8"))
+
+        command = Data
 
         #Domoticz.Log("Command: " + command['action'])
         if command['status'] == "Ok":
