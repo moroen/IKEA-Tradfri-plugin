@@ -77,12 +77,13 @@ class BasePlugin:
         # Add unregistred lights
         for aLight in ikeaDevices:
             Domoticz.Debug ("Registering: {0}".format(json.dumps(aLight)))
-
+            
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
 
+
             if not "HasRGB" in aLight:
-                aLight["HasRGB"] = False
+                aLight["HasRGB"] = "false"
 
             if not devID in self.lights:
                 deviceType = 244
@@ -98,12 +99,14 @@ class BasePlugin:
                 self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                 i=i+1
 
-                if aLight["HasRGB"]:
+                Domoticz.Log(aLight["HasRGB"])
+
+                if aLight["HasRGB"] == "true":
                     Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
                     self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
                     i=i+1
                                 
-                if aLight['HasWB'] == True:
+                if aLight['HasWB'] == "true":
                     Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
                     self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
                     i=i+1
@@ -133,9 +136,9 @@ class BasePlugin:
 
             sVal = str(sValInt)
 
-            if aDev["State"] == True:
+            if aDev["State"] == "true":
                 nVal = 1
-            if aDev["State"] == False:
+            if aDev["State"] == "false":
                 nVal = 0
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
