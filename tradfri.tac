@@ -13,8 +13,10 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.6"
+version = "0.7"
 verbose = False
+
+hostConfig = {}
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
@@ -25,6 +27,16 @@ if os.path.exists(INIFILE):
     deviceConfig.read(INIFILE)
 
 currentError = False
+
+CONFIGFILE = "{0}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+
+if os.path.isfile(CONFIGFILE):
+
+    with open(CONFIGFILE) as json_data_file:
+        hostConfig = json.load(json_data_file)
+else:
+    print ("Fatal: No config.json found")
+    exit()
 
 def error(f):
     global currentError
@@ -71,7 +83,7 @@ class CoapAdapter(TelnetProtocol):
         commands = json.loads(decoded)
 
         for command in commands:
-            if command['action']=="setConfig":
+            if command['action']=="initGateway":
                 # print("Setting config")
                 self.factory.initGateway(self, command)
                 #self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
@@ -262,7 +274,7 @@ class AdaptorFactory(ServerFactory):
             self.groups = False
 
         #try:
-        api_factory = APIFactory(command['gateway'], command['identity'], command['psk'])
+        api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
         self.api = api_factory.request
         self.gateway = Gateway()
@@ -299,9 +311,9 @@ class AdaptorFactory(ServerFactory):
                     self.lc.stop()
                 self.announce()
 
-            client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))        
+            client.transport.write(json.dumps({"action":"initGateway", "status": "Ok"}).encode(encoding='utf_8'))        
         else:
-            client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
+            client.transport.write(json.dumps({"action":"initGateway", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
     def sendDeviceList(self, client):
         devices = []

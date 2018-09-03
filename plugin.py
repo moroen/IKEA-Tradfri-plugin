@@ -5,10 +5,7 @@
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
-        <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
-        <param field="Mode5" label="Identity" with="200px" required="true" default=""/> 
-        <param field="Mode1" label="PSK" width="200px" required="true" default=""/>
-        
+        <param field="Address" label="Apdaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
             <options>
                 <option label="Yes" value="True"/>
@@ -156,7 +153,7 @@ class BasePlugin:
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(colors.colorLevelForHex(aDev['Hex'])))
 
     def connectToAdaptor(self):
-        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
+        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address=Parameters["Address"], Port="1234")
         self.CoapAdapter.Connect()
 
     def onStart(self):
@@ -183,7 +180,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "identity": Parameters["Mode5"], "psk": Parameters["Mode1"], "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
@@ -198,7 +195,7 @@ class BasePlugin:
         if command['status'] == "Ok":
             action = command['action']
 
-            if action == "setConfig":
+            if action == "initGateway":
                 # Config set
                 Connection.Send(Message=json.dumps({"action":"getLights"}).encode(encoding='utf_8'), Delay=1)
 
