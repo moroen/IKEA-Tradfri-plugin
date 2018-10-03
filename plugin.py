@@ -80,7 +80,7 @@ class BasePlugin:
 
             if not devID in self.lights:
                 if aLight["Type"] == "Outlet":
-                    Domoticz.Device(Name=aLight['Name'], Unit=i, TypeName="Switch", DeviceID=devID).Create()
+                    Domoticz.Device(Name=aLight['Name'], Unit=i, Type=244, Subtype=73, Switchtype=0, Image=1, DeviceID=devID).Create()
                     self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1
 
