@@ -78,35 +78,38 @@ class BasePlugin:
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
 
-
-            if not "HasRGB" in aLight:
-                aLight["HasRGB"] = "false"
-
             if not devID in self.lights:
-                deviceType = 244
-                subType = 73
-
-                if aLight['Dimmable']:
-                    switchType=7
-                else:
-                    switchType=0
-
-                #Basic device
-                Domoticz.Device(Name=aLight['Name'], Unit=i,  Type=deviceType, Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
-                self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
-                i=i+1
-
-                Domoticz.Log(aLight["HasRGB"])
-
-                if aLight["HasRGB"] == "true":
-                    Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
-                    self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
+                if aLight["Type"] == "Outlet":
+                    Domoticz.Device(Name=aLight['Name'], Unit=i, TypeName="Switch", DeviceID=devID).Create()
+                    self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1
-                                
-                if aLight['HasWB'] == "true":
-                    Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
-                    self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
-                    i=i+1
+
+                if aLight["Type"] == "Light":
+                    deviceType = 244
+                    subType = 73
+
+                    if not "HasRGB" in aLight:
+                        aLight["HasRGB"] = "false"
+
+                    if aLight['Dimmable']:
+                        switchType=7
+                    else:
+                        switchType=0
+
+                    #Basic device
+                    Domoticz.Device(Name=aLight['Name'], Unit=i,  Type=deviceType, Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
+                    self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
+                    i=i+1 
+
+                    if aLight["HasRGB"] == "true":
+                        Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
+                        self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
+                        i=i+1
+                                    
+                    if aLight['HasWB'] == "true":
+                        Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
+                        self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
+                        i=i+1
 
         #Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -123,20 +126,25 @@ class BasePlugin:
 
     def updateDeviceState(self, deviceState):
         for aDev in deviceState:
+            Domoticz.Debug(str(aDev))
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
             nVal = 0
-
-            sValInt = int((aDev["Level"]/250)*100)
-            if sValInt == 0:
-                sValInt = 1
-
-            sVal = str(sValInt)
+            sVal = 0
 
             if aDev["State"] == "true":
                 nVal = 1
+                sVal = "1"
             if aDev["State"] == "false":
                 nVal = 0
+                sVal = "0"
+
+            if "Level" in aDev:
+                sValInt = int((aDev["Level"]/250)*100)
+                if sValInt == 0:
+                    sValInt = 1
+
+                sVal = str(sValInt)
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
