@@ -4,6 +4,19 @@ A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
 Since domoticz plugins doesn't support COAP and also doesn't allow threads or async calls, the IKEA-tradfri plugin contains two parts, the domoticz plugin and a python3 IKEA-tradfri adaptor written with the twisted framework. The adaptor needs to be running at all times, and is intented to be run as a service using systemd.
 
+# What's supported
+The plugin supports and is able to controll the following devices:
+- All bulbs, with dimming for bulbs that are dimmable and setting white temperature/color for CW and CWS bulbs.
+- Outlets / sockets
+- Floalt LED Panels
+
+The plugin doesn't work with:
+- Motion sensors
+- Remotes - remotes can be used to switch lights/sockets, but not to trigger actions in domoticz
+
+Untested devices:
+- Tradfri LED-drives
+
 ## A note about branches
 The repository contains two primary branches. The 'master' branch is targeted at the master branch of domoticz, which should be the latest stable. The development branch tracks the domoticz developement branch (aka. latest beta), where the plugin interface still is in flux.
 
@@ -71,7 +84,7 @@ where IP is the address of the gateway, and GATEWAY-KEY is the security-key loca
 ```
 
 #### Using systemd
-1. Create a (reasonabl sane) systemd-service file:
+1. Create a (reasonably sane) systemd-service file:
 ```shell
   $ ./configure.py --skip-config --create-service
 ```
@@ -94,10 +107,10 @@ $ sudo systemctl enable ikea-tradfri.service
 Input the IP of the host where the adapter is running.
 NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and the adapter on the same machine, the default IP (localhost / 127.0.0.1) should work. 
 
-To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page.
+To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page and a reasonable polling intervall specified. 
 
 ### Upgrading from previous version of the plugin and adapter
-After upgrading to the laster version, restart domoticz and on the hardware-page, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and update.
+After upgrading to the laster version, restart domoticz and on the hardware-page, select the IKEA-Plugin, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and update.
 
 ## Docker Installation
 
