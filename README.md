@@ -12,10 +12,10 @@ The plugin supports and is able to controll the following devices:
 
 The plugin doesn't work with:
 - Motion sensors
-- Remotes - remotes can be used to switch lights/sockets, but not to trigger actions in domoticz
+- Remotes 
 
 Untested devices:
-- Tradfri LED-drives
+- Tradfri LED-drivers
 
 ## A note about branches
 The repository contains two primary branches. The 'master' branch is targeted at the master branch of domoticz, which should be the latest stable. The development branch tracks the domoticz developement branch (aka. latest beta), where the plugin interface still is in flux.
