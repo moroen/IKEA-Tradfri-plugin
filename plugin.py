@@ -170,7 +170,7 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(30)
+        Domoticz.Heartbeat(15)
 
         if len(Devices) > 0:
             # Some devices are already defined
