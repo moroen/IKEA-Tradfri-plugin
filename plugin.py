@@ -84,7 +84,7 @@ class BasePlugin:
                     self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1
 
-                if aLight["Type"] == "Light":
+                if aLight["Type"] == "Light" or aLight["Type"] == "Group":
                     deviceType = 244
                     subType = 73
 
