@@ -118,6 +118,10 @@ To run the plugin in a Docker (for example to on a Synology NAS), package the ad
 ```
 docker build -t ikea-tradfri-plugin:latest .
 ```
+RPI docker build:
+```
+docker build -t ikea-tradfri-plugin:latest . -f DockerfileRPI
+```
 
 Copy the docker image to the system running Domoticz and start the Docker instance:
 ```
