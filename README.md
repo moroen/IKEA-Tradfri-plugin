@@ -114,6 +114,8 @@ After upgrading to the laster version, restart domoticz and on the hardware-page
 
 ## Docker Installation
 
+Put IKEA gateway IP and preshared key from sticker into GW_config file.
+
 To run the plugin in a Docker (for example to on a Synology NAS), package the adapter using the provided Docker build file:
 ```
 docker build -t ikea-tradfri-plugin:latest .
@@ -125,8 +127,9 @@ docker build -t ikea-tradfri-plugin:latest . -f DockerfileRPI
 
 Copy the docker image to the system running Domoticz and start the Docker instance:
 ```
-docker run -t -p 127.0.0.1:1234:1234 ikea-tradfri-plugin:1234
+docker run --env-file=GW_config -t -p 127.0.0.1:1234:1234 ikea-tradfri-plugin:1234
 ```
+config.json file will be created automaticaly.
 
 Now the IKEA Tradfri to Domoticz adaptor is available on the localhost.
 
