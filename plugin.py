@@ -101,12 +101,12 @@ class BasePlugin:
                     self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1 
 
-                    if aLight["HasRGB"] == "true":
+                    if str(aLight["HasRGB"]).lower() == "true":
                         Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
                         self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
                         i=i+1
                                     
-                    if aLight['HasWB'] == "true":
+                    if str(aLight['HasWB']).lower() == "true":
                         Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
                         self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
                         i=i+1
@@ -145,7 +145,7 @@ class BasePlugin:
                     sValInt = 1
 
                 sVal = str(sValInt)
-                
+
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
             if "Hex" in aDev:
