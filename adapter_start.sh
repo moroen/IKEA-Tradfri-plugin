@@ -1,4 +1,3 @@
-# more adapter_start.sh 
 #!/usr/bin/env bash
 
 if [ ! -f /usr/src/app/config.json ]; then
