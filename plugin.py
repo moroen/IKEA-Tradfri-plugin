@@ -5,7 +5,7 @@
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
-        <param field="Address" label="Apdaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
+        <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
             <options>
                 <option label="Yes" value="True"/>
