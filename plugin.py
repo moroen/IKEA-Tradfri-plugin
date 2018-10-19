@@ -194,7 +194,13 @@ class BasePlugin:
         return True
 
     def onMessage(self, Connection, Data):
-        command = json.loads(Data.decode("utf-8"))
+
+        if hasattr(Data, "decode"):
+            # Stable API
+            command = json.loads(Data.decode("utf-8"))
+        else:
+            # Beta APi
+            command = Data
 
         if command['status'] == "Ok":
             action = command['action']
