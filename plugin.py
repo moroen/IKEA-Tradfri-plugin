@@ -130,12 +130,12 @@ class BasePlugin:
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
             nVal = 0
-            sVal = 0
+            sVal = "0"
 
-            if aDev["State"] == "true":
+            if str(aDev["State"]).lower() == "true":
                 nVal = 1
                 sVal = "1"
-            if aDev["State"] == "false":
+            if str(aDev["State"]).lower() == "false":
                 nVal = 0
                 sVal = "0"
 
@@ -145,7 +145,7 @@ class BasePlugin:
                     sValInt = 1
 
                 sVal = str(sValInt)
-
+                
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
             if "Hex" in aDev:
@@ -194,12 +194,8 @@ class BasePlugin:
         return True
 
     def onMessage(self, Connection, Data):
-        #Domoticz.Debug("Received: " + str(Data))
-        #command = json.loads(Data.decode("utf-8"))
+        command = json.loads(Data.decode("utf-8"))
 
-        command = Data
-
-        #Domoticz.Log("Command: " + command['action'])
         if command['status'] == "Ok":
             action = command['action']
 
