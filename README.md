@@ -17,9 +17,6 @@ The plugin doesn't work with:
 Untested devices:
 - Tradfri LED-drivers
 
-## A note about branches
-The repository contains two primary branches. The 'master' branch is targeted at the master branch of domoticz, which should be the latest stable. The development branch tracks the domoticz developement branch (aka. latest beta), where the plugin interface still is in flux.
-
 ## Requirements:
 1. Domoticz compiled with support for Python-Plugins. 
 2. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri). Required version: 6.0.1 or greater.
@@ -27,23 +24,16 @@ The repository contains two primary branches. The 'master' branch is targeted at
 3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
 ## Local Installation
-### 1. Install libcoap as per ggravlingen's description
-Alternately try using the install-coap-client script. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
+### 1. Install libcoap
+
+The provided install-coap-client script will try to compile and install libcoap. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
 ```shell
   $ bash ./install-coap-client.sh
 ```
 
-### 2a. Install pytradfri-library 
+### 2. Install pytradfri-library 
 ```shell
   $ pip3 install pytradfri
-```
-
-#### or
-
-```
-$ git clone https://github.com/ggravlingen/pytradfri.git
-$ cd pytradfri
-$ python3 setup.py install
 ```
 
 ### 3. Install twisted
@@ -56,18 +46,6 @@ Note: Depending on setup, it might be necessary to install twisted using sudo.
 ```
 ~/$ cd /opt/domoticz/plugins/
 /opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
-```
-
-If current version of domoticz is the latest stable, use the master branch:
-```shell
-  $ cd IKEA-Tradfri
-  $ git checkout master
-```
-
-If using the beta-version of domoticz, use the development branch:
-```shell
-  $ cd IKEA-Tradfri
-  $ git checkout development
 ```
 
 ### 5. Configure the Tradfri COAP-adapter: 
@@ -109,8 +87,11 @@ NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and 
 
 To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page and a reasonable polling intervall specified. 
 
+
 ### Upgrading from previous version of the plugin and adapter
-After upgrading to the laster version, restart domoticz and on the hardware-page, select the IKEA-Plugin, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and update.
+After upgrading to the lastest version, make sure to configure the adapter as described above.
+
+Then restart domoticz and on the hardware-page, select the IKEA-Plugin, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and press "Update".
 
 ## Docker Installation
 
