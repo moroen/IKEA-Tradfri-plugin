@@ -8,13 +8,17 @@ import json
 import sys
 import configparser
 import os
+import argparse
 
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.6"
+version = "0.8.1"
 verbose = False
+dryRun = False
+
+hostConfig = {}
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
@@ -25,6 +29,16 @@ if os.path.exists(INIFILE):
     deviceConfig.read(INIFILE)
 
 currentError = False
+
+CONFIGFILE = "{0}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+
+if os.path.isfile(CONFIGFILE):
+
+    with open(CONFIGFILE) as json_data_file:
+        hostConfig = json.load(json_data_file)
+else:
+    print ("Fatal: No config.json found")
+    exit()
 
 def error(f):
     global currentError
@@ -71,7 +85,7 @@ class CoapAdapter(TelnetProtocol):
         commands = json.loads(decoded)
 
         for command in commands:
-            if command['action']=="setConfig":
+            if command['action']=="initGateway":
                 # print("Setting config")
                 self.factory.initGateway(self, command)
                 #self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
@@ -197,10 +211,76 @@ class ikeaLight():
         except Exception as e:
             print("Error sending light state")
 
+class ikeaSocket():
+    deviceID = None
+    deviceName = None
+    lastState = None
+    modelNumber = None
+
+    device = None
+    factory = None
+
+    def __init__(self, factory, device):
+        self.deviceID = device.id
+        self.deviceName = device.name
+        self.modelNumber = device.device_info.model_number
+        self.lastState = device.socket_control.sockets[0].state
+        self.device = device
+        self.factory = factory
+
+    def setState(self, client, state):
+        answer = {}
+        answer["action"] = "setState"
+        answer["status"] = "Ok"
+
+        self.lastState = state
+
+        targetDevice = self.factory.api(self.factory.gateway.get_device(int(self.deviceID)))
+        setStateCommand = targetDevice.socket_control.set_state(state)
+        
+        try:
+            self.factory.api(setStateCommand)
+        except Exception as e:
+            verbosePrint("Failed to set state for socked with ID: {0}".format(self.deviceID))
+            answer["status"]="Failed"
+
+        if client != None:
+            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+            self.sendState(client)
+
+    def sendState(self, client):
+        devices = []
+        answer = {}
+
+        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState})
+
+        answer["action"] = "deviceUpdate"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        verbosePrint(answer)
+
+        if client != None:
+            try:
+                client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+            except Exception as e:
+                verbosePrint("Error sending socket state")
+
+    def hasChanged(self, device):
+        # NOTE: Device is a pytradfri-device-object
+        curState = device.socket_control.sockets[0].state
+
+        if curState != self.lastState:
+            self.lastState = curState
+            return True
+        else:
+            return False
+
 class AdaptorFactory(ServerFactory):
 
     ikeaLights = {}
     ikeaGroups = {}
+    ikeaSockets = {}
 
     devices = None
     groups = None
@@ -218,6 +298,11 @@ class AdaptorFactory(ServerFactory):
 
         self.lighStatus = {}
         self.lc = task.LoopingCall(self.announce)
+
+        if dryRun:
+            self.initGateway(None, None)
+            self.sendDeviceList(None)
+            self.setState(None, "65548", False)
 
     def logout(self):
         # print("Logout")
@@ -238,6 +323,11 @@ class AdaptorFactory(ServerFactory):
                         for client in self.clients:
                             self.ikeaLights[dev.id].sendState(client)
 
+                if dev.has_socket_control:
+                    if self.ikeaSockets[dev.id].hasChanged(dev):
+                        for client in self.clients:
+                            self.ikeaSockets[dev.id].sendState(client)
+
             if self.groups:
                 for group in self.groups:
                     if self.ikeaGroups[group.id].hasChanged(group):
@@ -251,18 +341,19 @@ class AdaptorFactory(ServerFactory):
         verbosePrint("Initializing gateway")
         connectedToGW = False
 
-        if command['observe']=="True":
-            self.observe = True
-        else:
-            self.observe = False
+        if command != None:
+            if command['observe']=="True":
+                self.observe = True
+            else:
+                self.observe = False
 
-        if command['groups']=="True":
-            self.groups = True
-        else:
-            self.groups = False
+            if command['groups']=="True":
+                self.groups = True
+            else:
+                self.groups = False
 
         #try:
-        api_factory = APIFactory(command['gateway'], command['identity'], command['psk'])
+        api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
         self.api = api_factory.request
         self.gateway = Gateway()
@@ -280,7 +371,11 @@ class AdaptorFactory(ServerFactory):
             try:
                 for dev in self.devices:
                     if dev.has_light_control:
+                        verbosePrint("Adding light with ID: {0}".format(dev.id))
                         self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
+                    if dev.has_socket_control:
+                        verbosePrint("Adding socket with ID: {0}".format(dev.id))
+                        self.ikeaSockets[dev.id] = ikeaSocket(factory=self, device=dev)
             except Exception as e:
                 print("Unable to iterate devices")
 
@@ -299,15 +394,18 @@ class AdaptorFactory(ServerFactory):
                     self.lc.stop()
                 self.announce()
 
-            client.transport.write(json.dumps({"action":"setConfig", "status": "Ok"}).encode(encoding='utf_8'))        
+            if client != None:
+                client.transport.write(json.dumps({"action":"initGateway", "status": "Ok"}).encode(encoding='utf_8'))
         else:
-            client.transport.write(json.dumps({"action":"setConfig", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
+            if client != None:
+                client.transport.write(json.dumps({"action":"initGateway", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
     def sendDeviceList(self, client):
         devices = []
         answer = {}
         configChanged = False
 
+        # Lights
         for key, aDevice in self.ikeaLights.items():
             # print (aDevice.modelNumber)
             if not aDevice.modelNumber in deviceConfig:
@@ -315,7 +413,12 @@ class AdaptorFactory(ServerFactory):
                 deviceConfig[aDevice.modelNumber] = deviceDefaults
                 configChanged = True
 
+            
             devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
+
+        # Outlets
+        for key, aDevice in self.ikeaSockets.items():
+            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Outlet"})
 
         if self.groups:
             for key, aGroup in self.ikeaGroups.items():
@@ -331,10 +434,15 @@ class AdaptorFactory(ServerFactory):
         answer["result"] =  devices
 
         verbosePrint(json.dumps(answer))
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        
+        if client != None:
+            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         for aDev in self.ikeaLights:
             self.ikeaLights[aDev].sendState(client)
+
+        for aSocket in self.ikeaSockets:
+            self.ikeaSockets[aSocket].sendState(client)
 
         if self.groups:
             for aGroup in self.ikeaGroups:
@@ -393,11 +501,18 @@ class AdaptorFactory(ServerFactory):
         if state == "Off":
             state = False
 
+        # Device is a light
         if deviceID in self.ikeaLights.keys():
             targetDevice = self.api(self.gateway.get_device(int(deviceID)))
             setStateCommand = targetDevice.light_control.set_state(state)
             target = self.ikeaLights[deviceID]
 
+        # Device is as outled
+        if deviceID in self.ikeaSockets.keys():
+            self.ikeaSockets[deviceID].setState(client, state)
+            return
+
+        # Device is a group
         if self.groups:
             if deviceID in self.ikeaGroups.keys():
                 targetDevice = self.api(self.gateway.get_group(int(deviceID)))
@@ -434,6 +549,14 @@ class AdaptorFactory(ServerFactory):
 if __name__ == "__main__":
     print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!".format(version))
     verbose = True
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dryrun", action="store_true")
+
+    args = parser.parse_args()
+
+    if args.dryrun:
+        dryRun = True
     
     endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory()).addErrback(error)
     

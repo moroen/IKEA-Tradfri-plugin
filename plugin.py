@@ -5,10 +5,7 @@
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
-        <param field="Address" label="IP Address" width="200px" required="true" default="127.0.0.1"/>
-        <param field="Mode5" label="Identity" with="200px" required="true" default=""/> 
-        <param field="Mode1" label="PSK" width="200px" required="true" default=""/>
-        
+        <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
             <options>
                 <option label="Yes" value="True"/>
@@ -77,36 +74,42 @@ class BasePlugin:
         # Add unregistred lights
         for aLight in ikeaDevices:
             Domoticz.Debug ("Registering: {0}".format(json.dumps(aLight)))
-
+            
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
 
-            if not "HasRGB" in aLight:
-                aLight["HasRGB"] = False
-
             if not devID in self.lights:
-                deviceType = 244
-                subType = 73
-
-                if aLight['Dimmable']:
-                    switchType=7
-                else:
-                    switchType=0
-
-                #Basic device
-                Domoticz.Device(Name=aLight['Name'], Unit=i,  Type=deviceType, Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
-                self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
-                i=i+1
-
-                if aLight["HasRGB"]:
-                    Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
-                    self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
+                if aLight["Type"] == "Outlet":
+                    Domoticz.Device(Name=aLight['Name'], Unit=i, Type=244, Subtype=73, Switchtype=0, Image=1, DeviceID=devID).Create()
+                    self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1
-                                
-                if aLight['HasWB'] == True:
-                    Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
-                    self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
-                    i=i+1
+
+                if aLight["Type"] == "Light" or aLight["Type"] == "Group":
+                    deviceType = 244
+                    subType = 73
+
+                    if not "HasRGB" in aLight:
+                        aLight["HasRGB"] = "false"
+
+                    if aLight['Dimmable']:
+                        switchType=7
+                    else:
+                        switchType=0
+
+                    #Basic device
+                    Domoticz.Device(Name=aLight['Name'], Unit=i,  Type=deviceType, Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
+                    self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
+                    i=i+1 
+
+                    if str(aLight["HasRGB"]).lower() == "true":
+                        Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
+                        self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
+                        i=i+1
+                                    
+                    if str(aLight['HasWB']).lower() == "true":
+                        Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
+                        self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
+                        i=i+1
 
         #Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -123,20 +126,25 @@ class BasePlugin:
 
     def updateDeviceState(self, deviceState):
         for aDev in deviceState:
+            Domoticz.Debug(str(aDev))
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
             nVal = 0
+            sVal = "0"
 
-            sValInt = int((aDev["Level"]/250)*100)
-            if sValInt == 0:
-                sValInt = 1
-
-            sVal = str(sValInt)
-
-            if aDev["State"] == True:
+            if str(aDev["State"]).lower() == "true":
                 nVal = 1
-            if aDev["State"] == False:
+                sVal = "1"
+            if str(aDev["State"]).lower() == "false":
                 nVal = 0
+                sVal = "0"
+
+            if "Level" in aDev:
+                sValInt = int((aDev["Level"]/250)*100)
+                if sValInt == 0:
+                    sValInt = 1
+
+                sVal = str(sValInt)
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
@@ -153,7 +161,7 @@ class BasePlugin:
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(colors.colorLevelForHex(aDev['Hex'])))
 
     def connectToAdaptor(self):
-        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address="127.0.0.1", Port="1234")
+        self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address=Parameters["Address"], Port="1234")
         self.CoapAdapter.Connect()
 
     def onStart(self):
@@ -162,7 +170,7 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(2)
+        Domoticz.Heartbeat(15)
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -180,20 +188,24 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"setConfig", "gateway": Parameters["Address"], "identity": Parameters["Mode5"], "psk": Parameters["Mode1"], "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
 
     def onMessage(self, Connection, Data):
-        #Domoticz.Debug("Received: " + str(Data))
-        command = json.loads(Data.decode("utf-8"))
 
-        #Domoticz.Log("Command: " + command['action'])
+        if hasattr(Data, "decode"):
+            # Stable API
+            command = json.loads(Data.decode("utf-8"))
+        else:
+            # Beta APi
+            command = Data
+
         if command['status'] == "Ok":
             action = command['action']
 
-            if action == "setConfig":
+            if action == "initGateway":
                 # Config set
                 Connection.Send(Message=json.dumps({"action":"getLights"}).encode(encoding='utf_8'), Delay=1)
 
