@@ -40,7 +40,10 @@ The provided install-coap-client script will try to compile and install libcoap.
 ```
 $ pip3 install twisted
 ```
-Note: Depending on setup, it might be necessary to install twisted using sudo.
+Note: Depending on the setup, it might be necessary to install twisted using sudo:
+```
+$ sudo pip3 install twisted
+```
 
 ### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
