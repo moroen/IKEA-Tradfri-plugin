@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.0.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.0" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
@@ -33,8 +33,9 @@
 </plugin>
 """
 import Domoticz
-import json
+import json, datetime
 import colors
+
 
 colorOption=""
 
@@ -50,8 +51,12 @@ class BasePlugin:
     outstandingPings = 0
     nextConnect = 3
 
+    lastPollTime = None
+    pollInterval = None
+
     def __init__(self):
         self.pluginStatus = 0
+        self.lastPollTime = datetime.datetime.now()
         return
 
     def unitOfUnit(self, i):
@@ -170,7 +175,8 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(15)
+        Domoticz.Heartbeat(5)
+        self.pollInterval = int(Parameters['Mode4'])
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -250,10 +256,6 @@ class BasePlugin:
                 if devId[1] == "CWS":
                     self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
 
-        # if (Devices[Unit].Type == 241) and (Devices[Unit].SubType == 1):
-        #     # This is a RGB-Device
-        #     Domoticz.Debug("RGB - Command: {0} Level: {1} Hue: {2}".format(Command, Level, Hue))
-
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
 
@@ -264,7 +266,11 @@ class BasePlugin:
 
     def onHeartbeat(self):
         if (self.CoapAdapter.Connected() == True):
-            pass
+            if Parameters["Mode2"]=="True":
+                interval=(datetime.datetime.now()-self.lastPollTime).seconds
+                if interval+1 > self.pollInterval:
+                    self.lastPollTime = datetime.datetime.now()
+                    self.CoapAdapter.Send(Message=json.dumps({"action":"announceChanged"}).encode(encoding='utf_8'))
         else:
             Domoticz.Debug("Not connected - nextConnect: {0}".format(self.nextConnect))
             self.nextConnect = self.nextConnect -1
