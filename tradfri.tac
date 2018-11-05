@@ -476,7 +476,7 @@ class AdaptorFactory(ServerFactory):
                 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
   
-        self.announce()
+        self.announceChanged()
 
     def setState(self, client, deviceID, state):
         answer = {}
@@ -520,7 +520,7 @@ class AdaptorFactory(ServerFactory):
         
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        self.announce()
+        self.announceChanged()
 
     def setHex(self, client, deviceID, hex):
         answer = {}
@@ -536,7 +536,7 @@ class AdaptorFactory(ServerFactory):
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        self.announce()
+        self.announceChanged()
 
     
 if __name__ == "__main__":
