@@ -22,6 +22,7 @@ parser.add_argument('key',
 
 parser.add_argument('--skip-config', help="Skip generating a config file", action="store_true")
 parser.add_argument('--create-service', help="Generate a systemd service-file", action="store_true")
+parser.add_argument('--debug', help="Diasble error handling", action="store_true")
 
 identity = uuid.uuid4().hex
 
@@ -46,6 +47,8 @@ if not args.skip_config:
         print("Config created!")
 
     except:
+        if args.debug:
+            raise 
         print("Failed to generate ID/PSK-pair.\nCheck that the IP and Master Key is correct.")
 
 if args.create_service:
