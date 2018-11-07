@@ -111,7 +111,12 @@ docker build -t ikea-tradfri-plugin:latest . -f DockerfileRPI
 
 Copy the docker image to the system running Domoticz and start the Docker instance:
 ```
-docker run --env-file=GW_config -t -p 127.0.0.1:1234:1234 ikea-tradfri-plugin:1234
+docker run -d \
+  --name ikea-tradfri-plugin \
+  --restart unless-stopped \
+  --env-file=GW_config \
+  -p 1234:1234 \
+  ikea-tradfri-plugin
 ```
 config.json file will be created automaticaly.
 
