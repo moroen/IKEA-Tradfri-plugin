@@ -14,7 +14,7 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.8.2"
+version = "0.8.3"
 verbose = False
 dryRun = False
 
