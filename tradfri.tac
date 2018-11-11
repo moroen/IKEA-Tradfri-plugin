@@ -7,14 +7,14 @@ from twisted.application.service import Application
 import json
 import sys
 import configparser
-import os
+import os, time
 import argparse
 
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.8.1"
+version = "0.8.3"
 verbose = False
 dryRun = False
 
@@ -102,6 +102,9 @@ class CoapAdapter(TelnetProtocol):
             if command['action']=="setHex":
                 self.factory.setHex(self, command["deviceID"], command['hex'])
 
+            if command['action']=="announceChanged":
+                self.factory.announceChanged()
+
         # except:
         #    print("Error: Failed to parse JSON")
         #    print("Unexpected error:", sys.exc_info()[0])
@@ -172,9 +175,9 @@ class ikeaLight():
         self.deviceID = device.id
         self.deviceName = device.name
         self.modelNumber = device.device_info.model_number
-        self.lastState = device.light_control.lights[0].state
-        self.lastLevel = device.light_control.lights[0].dimmer
-        self.lastWB = device.light_control.lights[0].hex_color
+        # self.lastState = device.light_control.lights[0].state
+        # self.lastLevel = device.light_control.lights[0].dimmer
+        # self.lastWB = device.light_control.lights[0].hex_color
         self.factory = factory
  
 
@@ -194,7 +197,7 @@ class ikeaLight():
     def sendState(self, client):
         devices = []
         answer = {}
-       
+    
         targetLevel = self.lastLevel
         if targetLevel == None:
             targetLevel = 0
@@ -204,7 +207,7 @@ class ikeaLight():
         answer["action"] = "deviceUpdate"
         answer["status"] = "Ok"
         answer["result"] =  devices
-
+        
         verbosePrint(answer)
         try:
             client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
@@ -297,12 +300,14 @@ class AdaptorFactory(ServerFactory):
         self.groups = None
 
         self.lighStatus = {}
-        self.lc = task.LoopingCall(self.announce)
-
+       
         if dryRun:
             self.initGateway(None, None)
             self.sendDeviceList(None)
             self.setState(None, "65548", False)
+            print("Sleeping for 10 seconds before announceChanged")
+            time.sleep(10)
+            self.announceChanged()
 
     def logout(self):
         # print("Logout")
@@ -311,12 +316,10 @@ class AdaptorFactory(ServerFactory):
     def buildProtocol(self, addr):
         return CoapAdapter(self)
 
-    def announce(self):
+    def announceChanged(self):
         try:
             self.devices = self.api(self.api(self.gateway.get_devices()))
-            if self.groups:
-                self.groups = self.api(self.api(self.gateway.get_groups()))
-
+                
             for dev in self.devices:
                 if dev.has_light_control:
                     if self.ikeaLights[dev.id].hasChanged(dev):
@@ -329,6 +332,8 @@ class AdaptorFactory(ServerFactory):
                             self.ikeaSockets[dev.id].sendState(client)
 
             if self.groups:
+                self.groups = self.api(self.api(self.gateway.get_groups()))
+
                 for group in self.groups:
                     if self.ikeaGroups[group.id].hasChanged(group):
                         for client in self.clients:
@@ -342,11 +347,6 @@ class AdaptorFactory(ServerFactory):
         connectedToGW = False
 
         if command != None:
-            if command['observe']=="True":
-                self.observe = True
-            else:
-                self.observe = False
-
             if command['groups']=="True":
                 self.groups = True
             else:
@@ -385,14 +385,6 @@ class AdaptorFactory(ServerFactory):
                         self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
                 except Exception as e:
                     print("Unable to iterate groups")
-
-            if self.observe:
-                if not self.lc.running:
-                    self.lc.start(int(command['pollinterval']))
-            else:
-                if self.lc.running:
-                    self.lc.stop()
-                self.announce()
 
             if client != None:
                 client.transport.write(json.dumps({"action":"initGateway", "status": "Ok"}).encode(encoding='utf_8'))
@@ -438,15 +430,16 @@ class AdaptorFactory(ServerFactory):
         if client != None:
             client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        for aDev in self.ikeaLights:
-            self.ikeaLights[aDev].sendState(client)
+        self.announceChanged()
+        # for aDev in self.ikeaLights:
+        #     self.ikeaLights[aDev].sendState(client)
 
-        for aSocket in self.ikeaSockets:
-            self.ikeaSockets[aSocket].sendState(client)
+        # for aSocket in self.ikeaSockets:
+        #     self.ikeaSockets[aSocket].sendState(client)
 
-        if self.groups:
-            for aGroup in self.ikeaGroups:
-                self.ikeaGroups[aGroup].sendState(client)
+        # if self.groups:
+        #     for aGroup in self.ikeaGroups:
+        #         self.ikeaGroups[aGroup].sendState(client)
 
     def setLevel(self, client, deviceID, level):
         answer = {}
@@ -483,7 +476,7 @@ class AdaptorFactory(ServerFactory):
                 
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
   
-        self.announce()
+        self.announceChanged()
 
     def setState(self, client, deviceID, state):
         answer = {}
@@ -527,7 +520,7 @@ class AdaptorFactory(ServerFactory):
         
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        self.announce()
+        self.announceChanged()
 
     def setHex(self, client, deviceID, hex):
         answer = {}
@@ -543,7 +536,7 @@ class AdaptorFactory(ServerFactory):
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
-        self.announce()
+        self.announceChanged()
 
     
 if __name__ == "__main__":

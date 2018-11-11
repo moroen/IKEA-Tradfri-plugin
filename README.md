@@ -90,6 +90,8 @@ NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and 
 
 To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page and a reasonable polling intervall specified. 
 
+### Observing changes
+To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 5, and the intervall should be a multiple of 5. 
 
 ### Upgrading from previous version of the plugin and adapter
 After upgrading to the lastest version, make sure to configure the adapter as described above.
