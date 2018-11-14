@@ -14,11 +14,15 @@ import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 
-version = "0.8.3"
+version = "0.8.4"
 verbose = False
 dryRun = False
 
 hostConfig = {}
+
+def verbosePrint(txt):
+    if verbose:
+        print(txt)
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
@@ -33,11 +37,11 @@ currentError = False
 CONFIGFILE = "{0}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
 
 if os.path.isfile(CONFIGFILE):
-
     with open(CONFIGFILE) as json_data_file:
         hostConfig = json.load(json_data_file)
 else:
-    print ("Fatal: No config.json found")
+    print ("Fatal: No config.json found!")
+    print ("Looking for: {0}".format(CONFIGFILE))
     exit()
 
 def error(f):
@@ -45,9 +49,7 @@ def error(f):
     print (f.getErrorMessage())
     currentError = True
 
-def verbosePrint(txt):
-    if verbose:
-        print(txt)
+
 
 def stringToBool(boolString):
     if boolString == "True":
