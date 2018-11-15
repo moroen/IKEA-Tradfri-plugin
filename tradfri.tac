@@ -13,8 +13,9 @@ import argparse
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
+from pytradfri import error as tradfriError
 
-version = "0.8.4"
+version = "0.8.5"
 verbose = False
 dryRun = False
 
@@ -340,8 +341,16 @@ class AdaptorFactory(ServerFactory):
                     if self.ikeaGroups[group.id].hasChanged(group):
                         for client in self.clients:
                             self.ikeaGroups[group.id].sendState(client)
+        except tradfriError.RequestTimeout:
+            print("Error in announce: Request timed out")
+            for client in self.clients:
+                client.transport.loseConnection()
+            return
         except Exception as e: 
-            print("Error in annouce: {0}:{1}".format(e, e.message))
+            print("Error in announce: Unspecified error")
+            for client in self.clients:
+                client.transport.loseConnection()
+            raise
 
     #def initGateway(self, client, ip, key, observe, interval, groups):
     def initGateway(self, client, command):
@@ -354,22 +363,27 @@ class AdaptorFactory(ServerFactory):
             else:
                 self.groups = False
 
-        #try:
+        
         api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
         self.api = api_factory.request
         self.gateway = Gateway()
-        
         connectedToGW = True
-        #except:
-        #    connectedToGW = False
-
-        if connectedToGW:
-            self.devices = self.api(self.api(self.gateway.get_devices()))
-            #self.devices = self.api(self.api(self.gateway.get_devices()))
-            if self.groups:
-                self.groups = self.api(self.api(self.gateway.get_groups()))
         
+        if connectedToGW:
+            try:
+                self.devices = self.api(self.api(self.gateway.get_devices()))
+                if self.groups:
+                    self.groups = self.api(self.api(self.gateway.get_groups()))
+            except tradfriError.RequestTimeout:
+                print("Failed to connect to gateway: Request timeout")
+                client.transport.loseConnection()
+                return
+            except:
+                print("Failed to connect to gateway: Unspecified error")
+                client.transport.loseConnection()
+                return
+
             try:
                 for dev in self.devices:
                     if dev.has_light_control:
