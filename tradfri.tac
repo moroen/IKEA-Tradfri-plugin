@@ -15,7 +15,7 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
-version = "0.8.5"
+version = "0.8.6"
 verbose = False
 dryRun = False
 
@@ -311,6 +311,7 @@ class AdaptorFactory(ServerFactory):
             print("Sleeping for 10 seconds before announceChanged")
             time.sleep(10)
             self.announceChanged()
+            exit()
 
     def logout(self):
         # print("Logout")
@@ -320,6 +321,7 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announceChanged(self):
+        verbosePrint("Announcing changed devices!")
         try:
             self.devices = self.api(self.api(self.gateway.get_devices()))
                 
@@ -376,11 +378,11 @@ class AdaptorFactory(ServerFactory):
                 if self.groups:
                     self.groups = self.api(self.api(self.gateway.get_groups()))
             except tradfriError.RequestTimeout:
-                print("Failed to connect to gateway: Request timeout")
+                print("Error in initGateway: Request timeout")
                 client.transport.loseConnection()
                 return
             except:
-                print("Failed to connect to gateway: Unspecified error")
+                print("Error in initGateway: Unspecified error")
                 client.transport.loseConnection()
                 return
 
@@ -418,10 +420,10 @@ class AdaptorFactory(ServerFactory):
             # print (aDevice.modelNumber)
             if not aDevice.modelNumber in deviceConfig:
                 verbosePrint("Device settings not found for {0}. Creating defaults!".format(aDevice.modelNumber))
-                deviceConfig[aDevice.modelNumber] = deviceDefaults
-                configChanged = True
+                if not aDevice.modelNumber == "": 
+                    deviceConfig[aDevice.modelNumber] = deviceDefaults
+                    configChanged = True
 
-            
             devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
 
         # Outlets
