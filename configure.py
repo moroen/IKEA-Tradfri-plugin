@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
-from pytradfri import Gateway
-from pytradfri.api.libcoap_api import APIFactory
+try:
+    from pytradfri import Gateway
+    from pytradfri.api.libcoap_api import APIFactory
+except ModuleNotFoundError:
+    print ("Error: Unable to import pytradfri. Please check your installation!")
+    exit()
 
 import uuid
 import argparse
@@ -49,13 +53,19 @@ if not args.skip_config:
     except:
         if args.debug:
             raise 
-        print("Failed to generate ID/PSK-pair.\nCheck that the IP and Master Key is correct.")
+        print("Error: Failed to generate ID/PSK-pair.\nCheck that the IP and Master Key is correct.")
 
 if args.create_service:
-    service = {"user": getpass.getuser(), "path": os.getcwd(), "twistd": shutil.which("twistd")}
-    tpl=open("ikea-tradfri.service.tpl").read()
-    src = Template(tpl)
-    result=src.substitute(service)
+    twistd_binary = shutil.which("twistd")
+    if twistd_binary == None:
+        print("Error: Unable to locate twistd. Please check your installation!")
+    else: 
+        service = {"user": getpass.getuser(), "path": os.getcwd(), "twistd": twistd_binary}
+        tpl=open("ikea-tradfri.service.tpl").read()
+        src = Template(tpl)
+        result=src.substitute(service)
     
-    with open('ikea-tradfri.service', 'w+') as f:
-        f.write(result)
+        with open('ikea-tradfri.service', 'w+') as f:
+            f.write(result)
+
+        print("ikea-tradfri.service created.")

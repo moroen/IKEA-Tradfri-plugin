@@ -13,12 +13,17 @@ import argparse
 import twisted.scripts.twistd as t
 from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
+from pytradfri import error as tradfriError
 
-version = "0.8.3"
+version = "0.8.6"
 verbose = False
 dryRun = False
 
 hostConfig = {}
+
+def verbosePrint(txt):
+    if verbose:
+        print(txt)
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
@@ -33,11 +38,11 @@ currentError = False
 CONFIGFILE = "{0}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
 
 if os.path.isfile(CONFIGFILE):
-
     with open(CONFIGFILE) as json_data_file:
         hostConfig = json.load(json_data_file)
 else:
-    print ("Fatal: No config.json found")
+    print ("Fatal: No config.json found!")
+    print ("Looking for: {0}".format(CONFIGFILE))
     exit()
 
 def error(f):
@@ -45,9 +50,7 @@ def error(f):
     print (f.getErrorMessage())
     currentError = True
 
-def verbosePrint(txt):
-    if verbose:
-        print(txt)
+
 
 def stringToBool(boolString):
     if boolString == "True":
@@ -308,6 +311,7 @@ class AdaptorFactory(ServerFactory):
             print("Sleeping for 10 seconds before announceChanged")
             time.sleep(10)
             self.announceChanged()
+            exit()
 
     def logout(self):
         # print("Logout")
@@ -317,6 +321,7 @@ class AdaptorFactory(ServerFactory):
         return CoapAdapter(self)
 
     def announceChanged(self):
+        verbosePrint("Announcing changed devices!")
         try:
             self.devices = self.api(self.api(self.gateway.get_devices()))
                 
@@ -338,8 +343,16 @@ class AdaptorFactory(ServerFactory):
                     if self.ikeaGroups[group.id].hasChanged(group):
                         for client in self.clients:
                             self.ikeaGroups[group.id].sendState(client)
+        except tradfriError.RequestTimeout:
+            print("Error in announce: Request timed out")
+            for client in self.clients:
+                client.transport.loseConnection()
+            return
         except Exception as e: 
-            print("Error in annouce: {0}:{1}".format(e, e.message))
+            print("Error in announce: Unspecified error")
+            for client in self.clients:
+                client.transport.loseConnection()
+            raise
 
     #def initGateway(self, client, ip, key, observe, interval, groups):
     def initGateway(self, client, command):
@@ -352,22 +365,27 @@ class AdaptorFactory(ServerFactory):
             else:
                 self.groups = False
 
-        #try:
+        
         api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
         self.api = api_factory.request
         self.gateway = Gateway()
-        
         connectedToGW = True
-        #except:
-        #    connectedToGW = False
-
-        if connectedToGW:
-            self.devices = self.api(self.api(self.gateway.get_devices()))
-            #self.devices = self.api(self.api(self.gateway.get_devices()))
-            if self.groups:
-                self.groups = self.api(self.api(self.gateway.get_groups()))
         
+        if connectedToGW:
+            try:
+                self.devices = self.api(self.api(self.gateway.get_devices()))
+                if self.groups:
+                    self.groups = self.api(self.api(self.gateway.get_groups()))
+            except tradfriError.RequestTimeout:
+                print("Error in initGateway: Request timeout")
+                client.transport.loseConnection()
+                return
+            except:
+                print("Error in initGateway: Unspecified error")
+                client.transport.loseConnection()
+                return
+
             try:
                 for dev in self.devices:
                     if dev.has_light_control:
@@ -402,10 +420,10 @@ class AdaptorFactory(ServerFactory):
             # print (aDevice.modelNumber)
             if not aDevice.modelNumber in deviceConfig:
                 verbosePrint("Device settings not found for {0}. Creating defaults!".format(aDevice.modelNumber))
-                deviceConfig[aDevice.modelNumber] = deviceDefaults
-                configChanged = True
+                if not aDevice.modelNumber == "": 
+                    deviceConfig[aDevice.modelNumber] = deviceDefaults
+                    configChanged = True
 
-            
             devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
 
         # Outlets
