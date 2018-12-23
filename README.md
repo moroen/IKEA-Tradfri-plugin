@@ -9,13 +9,11 @@ The plugin supports and is able to controll the following devices:
 - All bulbs, with dimming for bulbs that are dimmable and setting white temperature/color for CW and CWS bulbs.
 - Outlets / sockets
 - Floalt LED Panels
+- Tradfri LED-drivers
 
 The plugin doesn't work with:
 - Motion sensors
 - Remotes 
-
-Untested devices:
-- Tradfri LED-drivers
 
 ## Requirements:
 1. Domoticz compiled with support for Python-Plugins. 
