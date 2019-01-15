@@ -15,7 +15,7 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
-version = "0.8.6"
+version = "0.8.7"
 verbose = False
 dryRun = False
 
@@ -473,7 +473,7 @@ class AdaptorFactory(ServerFactory):
         if deviceID in self.ikeaLights.keys():
             targetDeviceCommand = self.gateway.get_device(deviceID)
             targetDevice = self.api(targetDeviceCommand)
-            setLevelCommand = targetDevice.light_control.set_dimmer(level)
+            setLevelCommand = targetDevice.light_control.set_dimmer(level, transition_time=5)
             target = self.ikeaLights[deviceID]
             # Set
             self.api(setLevelCommand)
@@ -549,7 +549,7 @@ class AdaptorFactory(ServerFactory):
 
         if deviceID in self.ikeaLights.keys():
             targetDevice = self.api(self.gateway.get_device(int(deviceID)))
-            setStateCommand = targetDevice.light_control.set_hex_color(hex)
+            setStateCommand = targetDevice.light_control.set_hex_color(hex, transition_time=5)
 
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
