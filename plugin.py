@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.0" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.1" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
@@ -12,6 +12,8 @@
                 <option label="No" value="False"  default="true" />
             </options>
         </param>
+
+        <param field="Mode5" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
 
         <param field="Mode4" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
 
@@ -194,7 +196,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True

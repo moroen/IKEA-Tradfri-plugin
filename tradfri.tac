@@ -15,7 +15,7 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
-version = "0.8.6"
+version = "0.8.7"
 verbose = False
 dryRun = False
 
@@ -294,6 +294,8 @@ class AdaptorFactory(ServerFactory):
     observe = False
     groups = False
 
+    transitionTime = 10
+
     def __init__(self):
         self.clients = []
         self.gateway = None
@@ -365,7 +367,13 @@ class AdaptorFactory(ServerFactory):
             else:
                 self.groups = False
 
-        
+            if command['transitiontime']=="":
+                self.transitionTime=10
+            else:
+                self.transitionTime=int(command['transitiontime'])
+
+        print("Transitiontime: {0}".format(self.transitionTime))
+
         api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
         self.api = api_factory.request
@@ -473,7 +481,7 @@ class AdaptorFactory(ServerFactory):
         if deviceID in self.ikeaLights.keys():
             targetDeviceCommand = self.gateway.get_device(deviceID)
             targetDevice = self.api(targetDeviceCommand)
-            setLevelCommand = targetDevice.light_control.set_dimmer(level)
+            setLevelCommand = targetDevice.light_control.set_dimmer(level, transition_time=self.transitionTime)
             target = self.ikeaLights[deviceID]
             # Set
             self.api(setLevelCommand)
@@ -482,7 +490,7 @@ class AdaptorFactory(ServerFactory):
             if deviceID in self.ikeaGroups.keys():
                 # First set level
                 targetDevice=self.api(self.gateway.get_group(int(deviceID)))
-                setLevelCommand = targetDevice.set_dimmer(level)
+                setLevelCommand = targetDevice.set_dimmer(level, transition_time=self.transitionTime)
                 target = self.ikeaGroups[deviceID]
                 self.api(setLevelCommand)
 
@@ -518,7 +526,7 @@ class AdaptorFactory(ServerFactory):
             setStateCommand = targetDevice.light_control.set_state(state)
             target = self.ikeaLights[deviceID]
 
-        # Device is as outled
+        # Device is as outlet
         if deviceID in self.ikeaSockets.keys():
             self.ikeaSockets[deviceID].setState(client, state)
             return
@@ -549,7 +557,7 @@ class AdaptorFactory(ServerFactory):
 
         if deviceID in self.ikeaLights.keys():
             targetDevice = self.api(self.gateway.get_device(int(deviceID)))
-            setStateCommand = targetDevice.light_control.set_hex_color(hex)
+            setStateCommand = targetDevice.light_control.set_hex_color(hex, transition_time=self.transitionTime)
 
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
