@@ -282,11 +282,60 @@ class ikeaSocket():
         else:
             return False
 
+class ikeaBatteryDevice():
+    _device = None 
+
+    def __init__(self, factory, device):
+        self._device = device
+        self.forceAnnouce = True
+        
+    @property
+    def deviceID(self):
+        return self._device.id
+
+    @property
+    def deviceName(self):
+        return self._device.name
+
+    @property
+    def battery_level(self):
+        return self._device.device_info.battery_level
+
+    def hasChanged(self, device):
+        if self.forceAnnouce:
+            self.forceAnnouce = False
+            return True
+
+        if self.battery_level != device.device_info.battery_level:
+            self._device = device
+            return True
+        else:
+            return False
+
+    def sendState(self, client):
+        devices = []
+        answer = {}
+
+        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "Level": self.battery_level})
+
+        answer["action"] = "deviceUpdate"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        verbosePrint(answer)
+
+        if client != None:
+            try:
+                client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+            except Exception as e:
+                verbosePrint("Error sending socket state")
+
 class AdaptorFactory(ServerFactory):
 
     ikeaLights = {}
     ikeaGroups = {}
     ikeaSockets = {}
+    ikeaBatteryDevices = {}
 
     devices = None
     groups = None
@@ -303,6 +352,7 @@ class AdaptorFactory(ServerFactory):
         self.devices = None
         self.lights = None
         self.groups = None
+        self.show_battery_levels = None
 
         self.lighStatus = {}
        
@@ -338,6 +388,12 @@ class AdaptorFactory(ServerFactory):
                         for client in self.clients:
                             self.ikeaSockets[dev.id].sendState(client)
 
+                if self.show_battery_levels:
+                    if dev.device_info.battery_level:
+                        if self.ikeaBatteryDevices[dev.id].hasChanged(dev):
+                            for client in self.clients:
+                                self.ikeaBatteryDevices[dev.id].sendState(client)
+
             if self.groups:
                 self.groups = self.api(self.api(self.gateway.get_groups()))
 
@@ -345,6 +401,9 @@ class AdaptorFactory(ServerFactory):
                     if self.ikeaGroups[group.id].hasChanged(group):
                         for client in self.clients:
                             self.ikeaGroups[group.id].sendState(client)
+
+                
+
         except tradfriError.RequestTimeout:
             print("Error in announce: Request timed out")
             for client in self.clients:
@@ -371,8 +430,14 @@ class AdaptorFactory(ServerFactory):
                 self.transitionTime=10
             else:
                 self.transitionTime=int(command['transitiontime'])
+            if command["battery_levels"]=="True":
+                self.show_battery_levels = True
+            else:
+                self.show_battery_levels = False
 
-        print("Transitiontime: {0}".format(self.transitionTime))
+        if dryRun:
+            self.show_battery_levels = True
+        
 
         api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
  
@@ -402,6 +467,11 @@ class AdaptorFactory(ServerFactory):
                     if dev.has_socket_control:
                         verbosePrint("Adding socket with ID: {0}".format(dev.id))
                         self.ikeaSockets[dev.id] = ikeaSocket(factory=self, device=dev)
+                    if dev.device_info.battery_level:
+                        # None if the device isn't battery-powered
+                        verbosePrint("Adding battery powered device with ID: {0}".format(dev.id))
+                        self.ikeaBatteryDevices[dev.id] = ikeaBatteryDevice(factory=self, device=dev)
+
             except Exception as e:
                 print("Unable to iterate devices")
 
@@ -442,6 +512,11 @@ class AdaptorFactory(ServerFactory):
             for key, aGroup in self.ikeaGroups.items():
                 #print (aGroup)
                 devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
+
+        if self.show_battery_levels:
+            for key, aDevice in self.ikeaBatteryDevices.items():
+                devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Battery_Level", "Dimmable": False, "HasWB": False})
+
 
         if configChanged:
             with open(INIFILE, "w") as configfile:

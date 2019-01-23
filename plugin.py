@@ -24,6 +24,13 @@
             </options>
         </param>
 
+        <param field="Mode1" label="Monitor battry levels" width="75px">
+            <options>
+                <option label="Yes" value="True"/>
+                <option label="No" value="False"  default="true" />
+            </options>
+        </param>
+
         <param field="Mode6" label="Debug" width="75px">
             <options>
                 <option label="True" value="Debug"/>
@@ -131,6 +138,10 @@ class BasePlugin:
             if not devID in ikeaIds:
                 Devices[aUnit].Delete()
 
+        # Percentages
+        Domoticz.Device(Name="Battery level", Unit=i,  Type=243, Subtype=6, DeviceID="Test01").Create()
+
+
     def updateDeviceState(self, deviceState):
         for aDev in deviceState:
             Domoticz.Debug(str(aDev))
@@ -196,7 +207,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"]}).encode(encoding='utf_8'), Delay=1)
+            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"], "battery_levels": Parameters["Mode1"]}).encode(encoding='utf_8'), Delay=1)
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
