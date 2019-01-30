@@ -1,0 +1,2 @@
+pytradfri==6.0.1
+Twisted==18.9.0
