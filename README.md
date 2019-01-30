@@ -11,9 +11,12 @@ The plugin supports and is able to controll the following devices:
 - Floalt LED Panels
 - Tradfri LED-drivers
 
+The plugin partly works with:
+- Remotes - It's possible to monitor battery levels, but not using a tradfri remote to controll lights through domoticz
+
 The plugin doesn't work with:
 - Motion sensors
-- Remotes 
+
 
 ## Requirements:
 1. Domoticz compiled with support for Python-Plugins. 
@@ -29,33 +32,24 @@ The provided install-coap-client script will try to compile and install libcoap.
   $ bash ./install-coap-client.sh
 ```
 
-### 2. Install pytradfri-library 
+### 2. Install required python packages
 ```shell
-  $ pip3 install pytradfri
+  $ pip3 install -r requirements.txt
 ```
 
-### 3. Install twisted
-```
-$ pip3 install twisted
-```
-Note: Depending on the setup, it might be necessary to install twisted using sudo:
-```
-$ sudo pip3 install twisted
-```
-
-### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
+### 3. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
 ~/$ cd /opt/domoticz/plugins/
 /opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 ```
 
-### 5. Configure the Tradfri COAP-adapter: 
+### 4. Configure the Tradfri COAP-adapter: 
 ```shell
   $ ./configure.py IP GATEWAY-KEY
 ```
 where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
-### 6. Enable COAP-adaptor
+### 5. Enable COAP-adaptor
 
 #### From prompt (for testing)
 ```
@@ -82,14 +76,14 @@ This should be run from the IKEA-Tradfri directoy, and as the user indented to r
 $ sudo systemctl enable ikea-tradfri.service
 ```
 
-### 7. Restart domoticz and enable IKEA-Tradfri from the hardware page
+### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
 Input the IP of the host where the adapter is running.
 NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and the adapter on the same machine, the default IP (localhost / 127.0.0.1) should work. 
 
 To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page and a reasonable polling intervall specified. 
 
 ### Observing changes
-To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 5, and the intervall should be a multiple of 5. 
+To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 5, and the intervall should be a multiple of 5 seconds. Using to short an interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
 
 ### Upgrading from previous version of the plugin and adapter
 After upgrading to the lastest version, make sure to configure the adapter as described above.
