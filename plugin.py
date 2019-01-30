@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.1" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.2" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
@@ -13,9 +13,9 @@
             </options>
         </param>
 
-        <param field="Mode5" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
-
         <param field="Mode4" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
+
+        <param field="Mode5" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
 
         <param field="Mode3" label="Add groups as devices" width="75px">
             <options>
@@ -63,9 +63,13 @@ class BasePlugin:
     lastPollTime = None
     pollInterval = None
 
+    lastBattryPollTime = None
+    batteryPollInterval = 3600
+
     def __init__(self):
         self.pluginStatus = 0
         self.lastPollTime = datetime.datetime.now()
+        self.lastBattryPollTime = datetime.datetime.now()
         return
 
     def unitOfUnit(self, i):
@@ -97,6 +101,11 @@ class BasePlugin:
                     Domoticz.Device(Name=aLight['Name'], Unit=i, Type=244, Subtype=73, Switchtype=0, Image=1, DeviceID=devID).Create()
                     self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
                     i=i+1
+
+                if aLight["Type"] == "Battery_Level":
+                    Domoticz.Device(Name=aLight["Name"] + " - Battery level", Unit=i,  Type=243, Subtype=6, DeviceID=devID).Create()
+                    self.lights[devID] = {"DeviceID": aLight['DeviceID'], "Unit": i}
+                    i=i+1 
 
                 if aLight["Type"] == "Light" or aLight["Type"] == "Group":
                     deviceType = 244
@@ -138,10 +147,6 @@ class BasePlugin:
             if not devID in ikeaIds:
                 Devices[aUnit].Delete()
 
-        # Percentages
-        Domoticz.Device(Name="Battery level", Unit=i,  Type=243, Subtype=6, DeviceID="Test01").Create()
-
-
     def updateDeviceState(self, deviceState):
         for aDev in deviceState:
             Domoticz.Debug(str(aDev))
@@ -177,6 +182,15 @@ class BasePlugin:
                         wbdevID = devID+":CWS"
                         targetUnit = self.lights[wbdevID]['Unit']
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(colors.colorLevelForHex(aDev['Hex'])))
+
+    def updateBatteryStatus(self, batteryStatus):
+        for aDev in batteryStatus:
+            devID = str(aDev["DeviceID"])
+            targetUnit = self.lights[devID]['Unit']
+
+            Domoticz.Debug("Battery: {0} - Unit: {1} -Level: {2}".format(devID, targetUnit, aDev["Level"]))
+            Devices[targetUnit].Update(nValue=int(aDev["Level"]), sValue=str(aDev["Level"]))
+
 
     def connectToAdaptor(self):
         self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address=Parameters["Address"], Port="1234")
@@ -234,6 +248,9 @@ class BasePlugin:
             if action == "deviceUpdate":
                 self.updateDeviceState(command['result'])
 
+            if action == "batteryStatus":
+                self.updateBatteryStatus(command['result'])
+
         if command['status'] == "Failed":
             Domoticz.Log("Command {0} failed with error: {1}.".format(command['action'],command['error']))
             Domoticz.Log(str(command))
@@ -284,6 +301,13 @@ class BasePlugin:
                 if interval+1 > self.pollInterval:
                     self.lastPollTime = datetime.datetime.now()
                     self.CoapAdapter.Send(Message=json.dumps({"action":"announceChanged"}).encode(encoding='utf_8'))
+
+            if Parameters["Mode1"]=="True":
+                # Poll batteries
+                interval=(datetime.datetime.now()-self.lastBattryPollTime).seconds
+                if interval+1 > self.batteryPollInterval:
+                    self.lastBattryPollTime=datetime.datetime.now()
+                    self.CoapAdapter.Send(Message=json.dumps({"action":"battery_status"}).encode(encoding='utf_8'))
         else:
             Domoticz.Debug("Not connected - nextConnect: {0}".format(self.nextConnect))
             self.nextConnect = self.nextConnect -1

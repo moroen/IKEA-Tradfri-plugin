@@ -15,7 +15,7 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
-version = "0.8.7"
+version = "0.8.8"
 verbose = False
 dryRun = False
 
@@ -107,6 +107,9 @@ class CoapAdapter(TelnetProtocol):
 
             if command['action']=="announceChanged":
                 self.factory.announceChanged()
+
+            if command["action"]=="battery_status":
+                self.factory.sendBattryLevels(self)
 
         # except:
         #    print("Error: Failed to parse JSON")
@@ -301,34 +304,9 @@ class ikeaBatteryDevice():
     def battery_level(self):
         return self._device.device_info.battery_level
 
-    def hasChanged(self, device):
-        if self.forceAnnouce:
-            self.forceAnnouce = False
-            return True
-
-        if self.battery_level != device.device_info.battery_level:
-            self._device = device
-            return True
-        else:
-            return False
-
-    def sendState(self, client):
-        devices = []
-        answer = {}
-
-        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "Level": self.battery_level})
-
-        answer["action"] = "deviceUpdate"
-        answer["status"] = "Ok"
-        answer["result"] =  devices
-
-        verbosePrint(answer)
-
-        if client != None:
-            try:
-                client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-            except Exception as e:
-                verbosePrint("Error sending socket state")
+    @property
+    def state(self):
+        return {"DeviceID": self.deviceID, "Name": self.deviceName, "Level": self.battery_level}
 
 class AdaptorFactory(ServerFactory):
 
@@ -359,6 +337,7 @@ class AdaptorFactory(ServerFactory):
         if dryRun:
             self.initGateway(None, None)
             self.sendDeviceList(None)
+            self.sendBattryLevels(None)
             self.setState(None, "65548", False)
             print("Sleeping for 10 seconds before announceChanged")
             time.sleep(10)
@@ -387,12 +366,6 @@ class AdaptorFactory(ServerFactory):
                     if self.ikeaSockets[dev.id].hasChanged(dev):
                         for client in self.clients:
                             self.ikeaSockets[dev.id].sendState(client)
-
-                if self.show_battery_levels:
-                    if dev.device_info.battery_level:
-                        if self.ikeaBatteryDevices[dev.id].hasChanged(dev):
-                            for client in self.clients:
-                                self.ikeaBatteryDevices[dev.id].sendState(client)
 
             if self.groups:
                 self.groups = self.api(self.api(self.gateway.get_groups()))
@@ -532,6 +505,10 @@ class AdaptorFactory(ServerFactory):
             client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         self.announceChanged()
+        
+        if self.show_battery_levels:
+            self.sendBattryLevels(client)
+
         # for aDev in self.ikeaLights:
         #     self.ikeaLights[aDev].sendState(client)
 
@@ -541,6 +518,26 @@ class AdaptorFactory(ServerFactory):
         # if self.groups:
         #     for aGroup in self.ikeaGroups:
         #         self.ikeaGroups[aGroup].sendState(client)
+
+    def sendBattryLevels(self, client):
+        verbosePrint("Sending battery levels")
+        devices = []
+        answer = {}
+
+        for key, aDevice in self.ikeaBatteryDevices.items():
+            devices.append(aDevice.state)
+
+        answer["action"] = "batteryStatus"
+        answer["status"] = "Ok"
+        answer["result"] =  devices
+
+        verbosePrint(answer)
+
+        if client != None:
+            try:
+                client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+            except Exception as e:
+                verbosePrint("Error sending battery status")
 
     def setLevel(self, client, deviceID, level):
         answer = {}
