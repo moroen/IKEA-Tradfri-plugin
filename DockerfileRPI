@@ -1,4 +1,4 @@
-FROM resin/rpi-raspbian:stretch
+FROM balenalib/rpi-raspbian:stretch
 
 RUN apt-get update -y && \
   apt-get install -y python3 python3-pip git autoconf automake libtool make python3-dev && \
