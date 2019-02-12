@@ -128,7 +128,11 @@ class BasePlugin:
                         Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
                         self.lights[devID+":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
                         i=i+1
-                                    
+
+                        Domoticz.Device(Name=aLight['Name'] + " - RGB",  Unit=i, Type=241, Subtype=2, Switchtype=7, DeviceID=devID+":RGB").Create()
+                        self.lights[devID+":RGB"] = {"DeviceID": devID+":RGB", "Unit": i}
+                        i=i+1
+
                     if str(aLight['HasWB']).lower() == "true":
                         Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch", Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
                         self.lights[devID+":WB"] = {"DeviceID": devID+":WB", "Unit": i}
@@ -142,6 +146,9 @@ class BasePlugin:
                 devID = devID[:-3]
 
             if devID[-4:] == ":CWS":
+                devID = devID[:-4]
+
+            if devID[-4:] == ":RGB":
                 devID = devID[:-4]
 
             if not devID in ikeaIds:
@@ -255,36 +262,45 @@ class BasePlugin:
             Domoticz.Log("Command {0} failed with error: {1}.".format(command['action'],command['error']))
             Domoticz.Log(str(command))
 
-    def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType)+" Hue: "+str(Hue))
+    def onCommand(self, Unit, Command, Level, Color):
+        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType)+" Color: {0}".format(Color))
 
-        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
-            if Command=="On":
-                self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
+        if Command=="On":
+            self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
 
-            if Command=="Off":
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
+        if Command=="Off":
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
 
-            if Command=="Set Level":
+        if Command=="Set Color":
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setColor", "level": int(int(Level)*250/100), "color": json.loads(Color), "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
+
+        if Command=="Set Level":
+            if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
+                # Normal dimmer
                 targetLevel = int(int(Level)*250/100)
                 self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'))
 
-        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
-            # This is a WB-device
-            hex = None
+            if (Devices[Unit].Type == 241):
+                # RGB-device
+                targetLevel = int(int(Level)*250/100)
+                self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID[:5], "level": targetLevel }).encode(encoding='utf_8'))
 
-            # [0] is the DeviceID [1] is the subType (WB/CWS)
-            devId = Devices[Unit].DeviceID.split(':')
-            
-            if Level==0:
-                #Off
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
+            if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
+                # This is a WB-device
+                hex = None
 
-            else:
-                if devId[1] == "WB":
-                    self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]}).encode(encoding='utf_8'))
-                if devId[1] == "CWS":
-                    self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
+                # [0] is the DeviceID [1] is the subType (WB/CWS)
+                devId = Devices[Unit].DeviceID.split(':')
+                
+                if Level==0:
+                    #Off
+                    self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
+
+                else:
+                    if devId[1] == "WB":
+                        self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]}).encode(encoding='utf_8'))
+                    if devId[1] == "CWS":
+                        self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
