@@ -17,6 +17,7 @@ from twisted.conch.telnet import TelnetProtocol, TelnetTransport
 from twisted.internet import endpoints, protocol, reactor, task
 from twisted.internet.protocol import ServerFactory
 
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from devices import ikeaBatteryDevice, ikeaGroup, ikeaLight, ikeaSocket
 
 version = "0.8.91"
