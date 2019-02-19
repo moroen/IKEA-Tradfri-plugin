@@ -198,6 +198,9 @@ class BasePlugin:
             Domoticz.Debug("Battery: {0} - Unit: {1} -Level: {2}".format(devID, targetUnit, aDev["Level"]))
             Devices[targetUnit].Update(nValue=int(aDev["Level"]), sValue=str(aDev["Level"]))
 
+    def sendMessage(self, connection, messageobj):
+        # connection.Send(Message="{0}\n".format(json.dumps(messageobj).encode(encoding='utf_8')))
+        connection.Send(Message="{0}\n".format(json.dumps(messageobj), Delay=1))
 
     def connectToAdaptor(self):
         self.CoapAdapter = Domoticz.Connection(Name="Main", Transport="TCP/IP", Protocol="JSON", Address=Parameters["Address"], Port="1234")
@@ -209,7 +212,7 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(5)
+        Domoticz.Heartbeat(2)
         self.pollInterval = int(Parameters['Mode4'])
 
         if len(Devices) > 0:
@@ -228,7 +231,7 @@ class BasePlugin:
 
         if (Status==0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"], "battery_levels": Parameters["Mode1"]}).encode(encoding='utf_8'), Delay=1)
+            self.sendMessage(Connection, {"action":"initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters['Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"], "battery_levels": Parameters["Mode1"]})
         else:
             Domoticz.Log("Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
         return True
@@ -247,7 +250,7 @@ class BasePlugin:
 
             if action == "initGateway":
                 # Config set
-                Connection.Send(Message=json.dumps({"action":"getLights"}).encode(encoding='utf_8'), Delay=1)
+                self.sendMessage(Connection, {"action":"getLights"})
 
             if action == "getLights":
                 self.registerDevices(command['result'])
@@ -265,14 +268,16 @@ class BasePlugin:
     def onCommand(self, Unit, Command, Level, Color):
         Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType)+" Color: {0}".format(Color))
 
+        devId = Devices[Unit].DeviceID.split(':')
+
         if Command=="On":
-            self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
+            self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": devId[0]}).encode(encoding='utf_8'))
 
         if Command=="Off":
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
 
         if Command=="Set Color":
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setColor", "level": int(int(Level)*250/100), "color": json.loads(Color), "deviceID": Devices[Unit].DeviceID[:5]}).encode(encoding='utf_8'))
+            self.CoapAdapter.Send(Message=json.dumps({"action":"setColor", "level": int(int(Level)*250/100), "color": json.loads(Color), "deviceID": devId[0]}).encode(encoding='utf_8'))
 
         if Command=="Set Level":
             if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
