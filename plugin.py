@@ -154,9 +154,17 @@ class BasePlugin:
             if not devID in ikeaIds:
                 Devices[aUnit].Delete()
 
+        # Set states
+        self.updateDeviceState(ikeaDevices)
+
     def updateDeviceState(self, deviceState):
+        Domoticz.Debug("UpdateDeviceState called with: {0}".format(deviceState))
+       
         for aDev in deviceState:
-            Domoticz.Debug(str(aDev))
+            
+            if aDev["Type"] == "Battery_Level":
+                continue
+
             devID = str(aDev["DeviceID"])
             targetUnit = self.lights[devID]['Unit']
             nVal = 0
@@ -164,17 +172,14 @@ class BasePlugin:
 
             if str(aDev["State"]).lower() == "true":
                 nVal = 1
-                sVal = "1"
             if str(aDev["State"]).lower() == "false":
                 nVal = 0
-                sVal = "0"
 
             if "Level" in aDev:
                 sValInt = int((aDev["Level"]/250)*100)
-                if sValInt == 0:
-                    sValInt = 1
-
                 sVal = str(sValInt)
+            else:
+                sVal = str(nVal)
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
@@ -250,19 +255,22 @@ class BasePlugin:
 
             if action == "initGateway":
                 # Config set
-                self.sendMessage(Connection, {"action":"getLights"})
+                self.sendMessage(Connection, {"action":"getDevices"})
 
-            if action == "getLights":
+            if action == "getDevices":
                 self.registerDevices(command['result'])
 
             if action == "deviceUpdate":
                 self.updateDeviceState(command['result'])
 
+            if action == "setState" or action == "setLevel" or action == "setHex":
+                self.updateDeviceState(command['result'])
+
             if action == "batteryStatus":
                 self.updateBatteryStatus(command['result'])
 
-        if command['status'] == "Failed":
-            Domoticz.Log("Command {0} failed with error: {1}.".format(command['action'],command['error']))
+        if command['status'] == "Error":
+            Domoticz.Log("Command {0} failed with error: {1}.".format(command['action'],command['result']))
             Domoticz.Log(str(command))
 
     def onCommand(self, Unit, Command, Level, Color):
@@ -271,41 +279,32 @@ class BasePlugin:
         devId = Devices[Unit].DeviceID.split(':')
 
         if Command=="On":
-            self.CoapAdapter.Send(Message=json.dumps({"action": "setState", "state": "On", "deviceID": devId[0]}).encode(encoding='utf_8'))
+            self.sendMessage(self.CoapAdapter, {"action": "setState", "state": "On", "deviceID": devId[0]})
 
         if Command=="Off":
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
-
+            self.sendMessage(self.CoapAdapter, {"action": "setState", "state": "Off", "deviceID": devId[0]})
+            
         if Command=="Set Color":
-            self.CoapAdapter.Send(Message=json.dumps({"action":"setColor", "level": int(int(Level)*250/100), "color": json.loads(Color), "deviceID": devId[0]}).encode(encoding='utf_8'))
+            self.sendMessage(self.CoapAdapter, {"action":"setColor", "level": int(int(Level)*250/100), "color": json.loads(Color), "deviceID": devId[0]})
 
         if Command=="Set Level":
-            if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
-                # Normal dimmer
-                targetLevel = int(int(Level)*250/100)
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel }).encode(encoding='utf_8'))
-
-            if (Devices[Unit].Type == 241):
-                # RGB-device
-                targetLevel = int(int(Level)*250/100)
-                self.CoapAdapter.Send(Message=json.dumps({"action":"setLevel", "deviceID": Devices[Unit].DeviceID[:5], "level": targetLevel }).encode(encoding='utf_8'))
-
             if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
                 # This is a WB-device
                 hex = None
 
-                # [0] is the DeviceID [1] is the subType (WB/CWS)
-                devId = Devices[Unit].DeviceID.split(':')
-                
                 if Level==0:
                     #Off
-                    self.CoapAdapter.Send(Message=json.dumps({"action":"setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
+                    self.sendMessage(self.CoapAdapter, {"action":"setState", "state": "Off", "deviceID": devId[0]})
 
                 else:
                     if devId[1] == "WB":
-                        self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]}).encode(encoding='utf_8'))
+                        self.sendMessage(self.CoapAdapter, {"action":"setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]})
                     if devId[1] == "CWS":
-                        self.CoapAdapter.Send(Message=json.dumps({"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
+                        self.sendMessage(self.CoapAdapter, {"action":"setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]})
+            else:
+                targetLevel = int(int(Level)*250/100)
+                self.sendMessage(self.CoapAdapter, {"action":"setLevel", "deviceID": devId[0], "level": targetLevel })
+
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text + "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
@@ -321,14 +320,14 @@ class BasePlugin:
                 interval=(datetime.datetime.now()-self.lastPollTime).seconds
                 if interval+1 > self.pollInterval:
                     self.lastPollTime = datetime.datetime.now()
-                    self.CoapAdapter.Send(Message=json.dumps({"action":"announceChanged"}).encode(encoding='utf_8'))
+                    self.sendMessage(self.CoapAdapter, {"action":"announceChanged"})
 
             if Parameters["Mode1"]=="True":
                 # Poll batteries
                 interval=(datetime.datetime.now()-self.lastBattryPollTime).seconds
                 if interval+1 > self.batteryPollInterval:
                     self.lastBattryPollTime=datetime.datetime.now()
-                    self.CoapAdapter.Send(Message=json.dumps({"action":"battery_status"}).encode(encoding='utf_8'))
+                    self.sendMessage(self.CoapAdapter, {"action":"battery_status"})
         else:
             Domoticz.Debug("Not connected - nextConnect: {0}".format(self.nextConnect))
             self.nextConnect = self.nextConnect -1
