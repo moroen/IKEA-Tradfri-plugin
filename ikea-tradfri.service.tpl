@@ -9,7 +9,7 @@ ExecStart=$twistd --nodaemon \
       --python=$path/tradfri.tac
 
 User=$user
-Group=$user
+Group=$group
 
 Restart=always
 
