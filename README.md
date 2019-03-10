@@ -16,15 +16,16 @@ The plugin doesn't work with:
 - Remotes 
 
 ## Requirements:
-1. Domoticz compiled with support for Python-Plugins. 
-2. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri). Required version: 6.0.1 or greater.
-3. Twisted (https://twistedmatrix.com/trac/)
-3. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
+1. Python version 3.5.3 or higher
+2. Domoticz compiled with support for Python-Plugins. 
+3. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri). Required version: 6.0.1.
+4. Twisted (https://twistedmatrix.com/trac/)
+5. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
 ## Local Installation
 ### 1. Install libcoap
 
-The provided install-coap-client script will try to compile and install libcoap. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
+The provided install-coap-client script will try to download, compile and install libcoap. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
 ```shell
   $ bash ./install-coap-client.sh
 ```
@@ -38,7 +39,7 @@ The provided install-coap-client script will try to compile and install libcoap.
 ```
 $ pip3 install twisted
 ```
-Note: Depending on the setup, it might be necessary to install twisted using sudo:
+Note: Depending on the setup (i.e raspbian), it might be necessary to install twisted using sudo:
 ```
 $ sudo pip3 install twisted
 ```
@@ -51,7 +52,7 @@ $ sudo pip3 install twisted
 
 ### 5. Configure the Tradfri COAP-adapter: 
 ```shell
-  $ ./configure.py IP GATEWAY-KEY
+  $ ./configure.py config IP GATEWAY-KEY
 ```
 where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
@@ -65,16 +66,29 @@ where IP is the address of the gateway, and GATEWAY-KEY is the security-key loca
 #### Using systemd
 1. Create a (reasonably sane) systemd-service file:
 ```shell
-  $ ./configure.py --skip-config --create-service
+  $ ./configure.py service create
 ```
 
-This should be run from the IKEA-Tradfri directoy, and as the user indented to run the adapter.
+This should be run from the IKEA-Tradfri directoy, and as the user indented to run the adapter. To specify another user or group, use the --user and --group flags:
+
+```shell
+  $ ./configure.py service create --user domoticz --group domogroup
+```
+
+Note: If only --user is specified, the group will be set to the same name as the user
 
 2. Verify that the generated ikea-tradfri.service-file has the correct paths and user, then copy the service-file to systemd-service directory, reload systemd-daemon and start the IKEA-tradfri service:
 ```shell
-/opt/domoticz/plugins/IKEA-Tradfri$ sudo cp ikea-tradfri.service /etc/systemd/system
-/opt/domoticz/plugins/IKEA-Tradfri$ sudo systemctl daemon-reload
-/opt/domoticz/plugins/IKEA-Tradfri$ sudo systemctl start ikea-tradfri.service
+  $ sudo cp ikea-tradfri.service /etc/systemd/system
+  $ sudo systemctl daemon-reload
+  $ sudo systemctl start ikea-tradfri.service
+```
+
+Optionally use configure.py to install the service-file in the correct location:
+```shell
+  $ ./configure.py service install
+  $ sudo systemctl daemon-reload
+  $ sudo systemctl start ikea-tradfri.service
 ```
 
 #### Using systemd to start the COAP-adaptor on startup

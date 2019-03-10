@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 
-try:
-    from pytradfri import Gateway
-    from pytradfri.api.libcoap_api import APIFactory
-    from pytradfri.error import RequestError, RequestTimeout
-
-except ModuleNotFoundError:
-    print ("Error: Unable to import pytradfri. Please check your installation!")
-    exit()
-
 import uuid
 import argparse
 import json
 
+from shutil import copyfile
+
 from string import Template
-import getpass,os, shutil
+import getpass, os, shutil
 
 config = {}
 
@@ -33,11 +26,11 @@ service_create = parser_service.add_parser("create")
 service_create.add_argument("--user")
 service_create.add_argument("--group")
 
+service_install = parser_service.add_parser("install")
+
 service_show = parser_service.add_parser("show")
 
 args = parser.parse_args()
-
-print (args)
 
 def show_service_file():
     try:
@@ -47,6 +40,15 @@ def show_service_file():
         print("Error: No ikea-tradfri.service-file found!\nGenerate file with 'configure.py service create'")
 
 if args.command == "config":
+    try:
+        from pytradfri import Gateway
+        from pytradfri.api.libcoap_api import APIFactory
+        from pytradfri.error import RequestError, RequestTimeout
+
+    except ImportError:
+        print ("Error: Unable to import pytradfri. Please check your installation!")
+        exit()
+
     identity = uuid.uuid4().hex
     api_factory = APIFactory(host=args.IP, psk_id=identity)
 
@@ -100,3 +102,9 @@ elif args.command == "service":
 
     elif args.service_command == "show":
         show_service_file()
+
+    elif args.service_command == "install":
+        try:
+            copyfile("ikea-tradfri.service", "/etc/systemd/system/ikea-tradfri.service")
+        except PermissionError:
+            print("Error: Can't install ikea-tradfri.service in /etc/systemd/system")
