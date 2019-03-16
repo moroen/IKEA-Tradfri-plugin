@@ -1,71 +1,110 @@
 #!/usr/bin/env python3
 
-try:
-    from pytradfri import Gateway
-    from pytradfri.api.libcoap_api import APIFactory
-except ModuleNotFoundError:
-    print ("Error: Unable to import pytradfri. Please check your installation!")
-    exit()
-
 import uuid
 import argparse
 import json
 
+from shutil import copyfile
+
 from string import Template
-import getpass,os, shutil
+import getpass, os, shutil
 
 config = {}
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('host', metavar='IP', type=str,  
-                    help='IP Address of your Tradfri gateway', nargs="?")
+subparsers = parser.add_subparsers(dest="command")
+subparsers.required = True
 
-parser.add_argument('key', 
-                    help='Security code found on your Tradfri gateway', nargs="?")
+parser_config = subparsers.add_parser("config")
+parser_config.add_argument("IP")
+parser_config.add_argument("KEY")
 
-parser.add_argument('--skip-config', help="Skip generating a config file", action="store_true")
-parser.add_argument('--create-service', help="Generate a systemd service-file", action="store_true")
-parser.add_argument('--debug', help="Diasble error handling", action="store_true")
+parser_service = subparsers.add_parser("service").add_subparsers(dest="service_command")
+parser_service.required = True
+service_create = parser_service.add_parser("create")
+service_create.add_argument("--user")
+service_create.add_argument("--group")
 
-identity = uuid.uuid4().hex
+service_install = parser_service.add_parser("install")
+
+service_show = parser_service.add_parser("show")
 
 args = parser.parse_args()
 
-api_factory = APIFactory(host=args.host, psk_id=identity)
+def show_service_file():
+    try:
+        with open("ikea-tradfri.service", 'r') as fin:
+            print(fin.read(), end="")
+    except FileNotFoundError:
+        print("Error: No ikea-tradfri.service-file found!\nGenerate file with 'configure.py service create'")
 
-if not args.skip_config:
-    if (args.host is None) or (args.key is None):
-        print("Error: IP and KEY required!")
+if args.command == "config":
+    try:
+        from pytradfri import Gateway
+        from pytradfri.api.libcoap_api import APIFactory
+        from pytradfri.error import RequestError, RequestTimeout
+
+    except ImportError:
+        print ("Error: Unable to import pytradfri. Please check your installation!")
         exit()
 
-    try:
-        psk = api_factory.generate_psk(args.key)
-        config["Gateway"] = args.host
-        config["Identity"] = identity
-        config["Passkey"] = psk
+    identity = uuid.uuid4().hex
+    api_factory = APIFactory(host=args.IP, psk_id=identity)
 
+
+    try:
+        psk = api_factory.generate_psk(args.KEY)
+    except RequestTimeout:
+        print("Error: Connection to gateway timed out!\nPlease check IP/KEY.")
+        exit()
+    except:
+        print("Error: Unknown error")
+        exit()
+
+    config["Gateway"] = args.IP
+    config["Identity"] = identity
+    config["Passkey"] = psk
+
+    try:
         with open('config.json', 'w') as outfile:
             json.dump(config, outfile)
-
         print("Config created!")
+    except PermissionError:
+        print("Error: Could not write config.json")
 
-    except:
-        if args.debug:
-            raise 
-        print("Error: Failed to generate ID/PSK-pair.\nCheck that the IP and Master Key is correct.")
+elif args.command == "service":
+    if args.service_command == "create":
+        twistd_binary = shutil.which("twistd")
+        if twistd_binary == None:
+            print("Error: Unable to locate twistd. Please check your installation!")
+        else: 
+            service = {"user": getpass.getuser(), "group": getpass.getuser(), "path": os.getcwd(), "twistd": twistd_binary}
+            if args.user is not None:
+                service["user"] = args.user
+                if args.group is None:
+                    service["group"] = args.user
 
-if args.create_service:
-    twistd_binary = shutil.which("twistd")
-    if twistd_binary == None:
-        print("Error: Unable to locate twistd. Please check your installation!")
-    else: 
-        service = {"user": getpass.getuser(), "path": os.getcwd(), "twistd": twistd_binary}
-        tpl=open("ikea-tradfri.service.tpl").read()
-        src = Template(tpl)
-        result=src.substitute(service)
-    
-        with open('ikea-tradfri.service', 'w+') as f:
-            f.write(result)
+            if args.group is not None:
+                service["group"] = args.group
+            
+            tpl=open("ikea-tradfri.service.tpl").read()
+            src = Template(tpl)
+            result=src.substitute(service)
+            try:
+                with open('ikea-tradfri.service', 'w+') as f:
+                    f.write(result)
 
-        print("ikea-tradfri.service created.")
+                print("ikea-tradfri.service created:")
+                show_service_file()
+            except PermissionError:
+                print("Error: Could not write ikea-tradfri.service")
+
+    elif args.service_command == "show":
+        show_service_file()
+
+    elif args.service_command == "install":
+        try:
+            copyfile("ikea-tradfri.service", "/etc/systemd/system/ikea-tradfri.service")
+        except PermissionError:
+            print("Error: Can't install ikea-tradfri.service in /etc/systemd/system")
