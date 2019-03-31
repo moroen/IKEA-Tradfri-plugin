@@ -27,6 +27,9 @@ RUN pip3 install twisted
 WORKDIR /usr/src/app
 COPY tradfri.tac /usr/src/app
 COPY configure.py /usr/src/app
+COPY colors.py /usr/src/app
+COPY devices.py /usr/src/app
+COPY devices.ini /usr/src/app
 COPY adapter_start.sh /usr/src/app
 
 EXPOSE 1234
