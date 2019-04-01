@@ -7,7 +7,8 @@ from twisted.application.service import Application
 import json
 import sys
 import configparser
-import os, time
+import os
+import time
 import argparse
 
 import twisted.scripts.twistd as t
@@ -15,15 +16,19 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
-version = "0.8.7"
+from ikeatradfri.device_classes import ikeaGroup, ikeaLight, ikeaSocket
+
+version = "0.8.8"
 verbose = False
 dryRun = False
 
 hostConfig = {}
 
+
 def verbosePrint(txt):
     if verbose:
         print(txt)
+
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
@@ -35,21 +40,22 @@ if os.path.exists(INIFILE):
 
 currentError = False
 
-CONFIGFILE = "{0}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+CONFIGFILE = "{0}/config.json".format(
+    os.path.dirname(os.path.realpath(__file__)))
 
 if os.path.isfile(CONFIGFILE):
     with open(CONFIGFILE) as json_data_file:
         hostConfig = json.load(json_data_file)
 else:
-    print ("Fatal: No config.json found!")
-    print ("Looking for: {0}".format(CONFIGFILE))
+    print("Fatal: No config.json found!")
+    print("Looking for: {0}".format(CONFIGFILE))
     exit()
+
 
 def error(f):
     global currentError
-    print (f.getErrorMessage())
+    print(f.getErrorMessage())
     currentError = True
-
 
 
 def stringToBool(boolString):
@@ -60,10 +66,10 @@ def stringToBool(boolString):
     else:
         return None
 
+
 class CoapAdapter(TelnetProtocol):
     api = ""
     gateway = ""
-
 
     def __init__(self, factory):
         self.factory = factory
@@ -84,28 +90,30 @@ class CoapAdapter(TelnetProtocol):
 
         decoded = data.decode("utf-8")
         decoded = '[' + decoded.replace('}{', '},{') + ']'
-        
+
         commands = json.loads(decoded)
 
         for command in commands:
-            if command['action']=="initGateway":
+            if command['action'] == "initGateway":
                 # print("Setting config")
                 self.factory.initGateway(self, command)
                 #self.factory.initGateway(self, command['gateway'], command['key'], command['observe'], command['pollinterval'], command['groups'])
 
-            if command['action']=="getLights":
+            if command['action'] == "getLights":
                 self.factory.sendDeviceList(self)
 
-            if command['action']=="setLevel":
-                self.factory.setLevel(self, command["deviceID"], command["level"])
+            if command['action'] == "setLevel":
+                self.factory.setLevel(
+                    self, command["deviceID"], command["level"])
 
-            if command['action']=="setState":
-                self.factory.setState(self, command["deviceID"], command["state"])
+            if command['action'] == "setState":
+                self.factory.setState(
+                    self, command["deviceID"], command["state"])
 
-            if command['action']=="setHex":
+            if command['action'] == "setHex":
                 self.factory.setHex(self, command["deviceID"], command['hex'])
 
-            if command['action']=="announceChanged":
+            if command['action'] == "announceChanged":
                 self.factory.announceChanged()
 
         # except:
@@ -116,171 +124,6 @@ class CoapAdapter(TelnetProtocol):
         print("Disconnected")
         self.factory.clients.remove(self)
 
-class ikeaGroup():
-    deviceID = None
-    deviceName = None
-    lastState = None
-    lastLevel = None
-    factory = None
-
-    def __init__(self, factory, group):
-        self.deviceID = group.id
-        self.deviceName = group.name
-        self.lastState = group.state
-        self.lastLevel = group.dimmer
-        self.factory = factory
-
-    def hasChanged(self, group):
-        # targetGroup = self.factory.api(self.factory.gateway.get_group(int(self.deviceID)))
-
-        curState = group.state
-        curLevel = group.dimmer
-
-        if (curState == self.lastState) and (curLevel == self.lastLevel):
-            return False
-        else:
-            self.lastState = curState
-            self.lastLevel = curLevel
-            return True
-        
-    def sendState(self, client):
-        devices = []
-        answer = {}
-        
-        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState, "Level": self.lastLevel})
-
-        answer["action"] = "deviceUpdate"
-        answer["status"] = "Ok"
-        answer["result"] =  devices
-
-        verbosePrint(answer)
-        try:
-            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-        except Exception as e:
-            print("Error sending group state")
-
-class ikeaLight():
-
-    whiteTemps = {"cold":"f5faf6", "normal":"f1e0b5", "warm":"efd275"}
-
-    deviceID = None
-    deviceName = None
-    lastState = None
-    lastLevel = None
-    lastWB = None
-    modelNumber = None
-
-    device = None
-    factory = None
-
-    def __init__(self, factory, device):
-        self.device = device
-        self.deviceID = device.id
-        self.deviceName = device.name
-        self.modelNumber = device.device_info.model_number
-        # self.lastState = device.light_control.lights[0].state
-        # self.lastLevel = device.light_control.lights[0].dimmer
-        # self.lastWB = device.light_control.lights[0].hex_color
-        self.factory = factory
- 
-
-    def hasChanged(self, device):
-        curState = device.light_control.lights[0].state
-        curLevel = device.light_control.lights[0].dimmer
-        curWB = device.light_control.lights[0].hex_color
-
-        if (curState == self.lastState) and (curLevel == self.lastLevel) and (curWB == self.lastWB):
-            return False
-        else:
-            self.lastState = curState
-            self.lastLevel = curLevel
-            self.lastWB = curWB
-            return True
-
-    def sendState(self, client):
-        devices = []
-        answer = {}
-    
-        targetLevel = self.lastLevel
-        if targetLevel == None:
-            targetLevel = 0
-
-        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState, "Level": targetLevel, "Hex": self.lastWB})
-
-        answer["action"] = "deviceUpdate"
-        answer["status"] = "Ok"
-        answer["result"] =  devices
-        
-        verbosePrint(answer)
-        try:
-            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-        except Exception as e:
-            print("Error sending light state")
-
-class ikeaSocket():
-    deviceID = None
-    deviceName = None
-    lastState = None
-    modelNumber = None
-
-    device = None
-    factory = None
-
-    def __init__(self, factory, device):
-        self.deviceID = device.id
-        self.deviceName = device.name
-        self.modelNumber = device.device_info.model_number
-        self.lastState = device.socket_control.sockets[0].state
-        self.device = device
-        self.factory = factory
-
-    def setState(self, client, state):
-        answer = {}
-        answer["action"] = "setState"
-        answer["status"] = "Ok"
-
-        self.lastState = state
-
-        targetDevice = self.factory.api(self.factory.gateway.get_device(int(self.deviceID)))
-        setStateCommand = targetDevice.socket_control.set_state(state)
-        
-        try:
-            self.factory.api(setStateCommand)
-        except Exception as e:
-            verbosePrint("Failed to set state for socked with ID: {0}".format(self.deviceID))
-            answer["status"]="Failed"
-
-        if client != None:
-            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-            self.sendState(client)
-
-    def sendState(self, client):
-        devices = []
-        answer = {}
-
-        devices.append({"DeviceID": self.deviceID, "Name": self.deviceName, "State": self.lastState})
-
-        answer["action"] = "deviceUpdate"
-        answer["status"] = "Ok"
-        answer["result"] =  devices
-
-        verbosePrint(answer)
-
-        if client != None:
-            try:
-                client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-            except Exception as e:
-                verbosePrint("Error sending socket state")
-
-    def hasChanged(self, device):
-        # NOTE: Device is a pytradfri-device-object
-        curState = device.socket_control.sockets[0].state
-
-        if curState != self.lastState:
-            self.lastState = curState
-            return True
-        else:
-            return False
 
 class AdaptorFactory(ServerFactory):
 
@@ -305,7 +148,7 @@ class AdaptorFactory(ServerFactory):
         self.groups = None
 
         self.lighStatus = {}
-       
+
         if dryRun:
             self.initGateway(None, None)
             self.sendDeviceList(None)
@@ -326,7 +169,7 @@ class AdaptorFactory(ServerFactory):
         verbosePrint("Announcing changed devices!")
         try:
             self.devices = self.api(self.api(self.gateway.get_devices()))
-                
+
             for dev in self.devices:
                 if dev.has_light_control:
                     if self.ikeaLights[dev.id].hasChanged(dev):
@@ -350,36 +193,37 @@ class AdaptorFactory(ServerFactory):
             for client in self.clients:
                 client.transport.loseConnection()
             return
-        except Exception as e: 
+        except Exception as e:
             print("Error in announce: Unspecified error")
             for client in self.clients:
                 client.transport.loseConnection()
             raise
 
-    #def initGateway(self, client, ip, key, observe, interval, groups):
+    # def initGateway(self, client, ip, key, observe, interval, groups):
     def initGateway(self, client, command):
         verbosePrint("Initializing gateway")
         connectedToGW = False
 
         if command != None:
-            if command['groups']=="True":
+            if command['groups'] == "True":
                 self.groups = True
             else:
                 self.groups = False
 
-            if command['transitiontime']=="":
-                self.transitionTime=10
+            if command['transitiontime'] == "":
+                self.transitionTime = 10
             else:
-                self.transitionTime=int(command['transitiontime'])
+                self.transitionTime = int(command['transitiontime'])
 
         print("Transitiontime: {0}".format(self.transitionTime))
 
-        api_factory = APIFactory(hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
- 
+        api_factory = APIFactory(
+            hostConfig["Gateway"], hostConfig['Identity'], hostConfig['Passkey'])
+
         self.api = api_factory.request
         self.gateway = Gateway()
         connectedToGW = True
-        
+
         if connectedToGW:
             try:
                 self.devices = self.api(self.api(self.gateway.get_devices()))
@@ -397,26 +241,33 @@ class AdaptorFactory(ServerFactory):
             try:
                 for dev in self.devices:
                     if dev.has_light_control:
-                        verbosePrint("Adding light with ID: {0}".format(dev.id))
-                        self.ikeaLights[dev.id] = ikeaLight(factory=self, device=dev)
+                        verbosePrint(
+                            "Adding light with ID: {0}".format(dev.id))
+                        self.ikeaLights[dev.id] = ikeaLight(
+                            factory=self, device=dev)
                     if dev.has_socket_control:
-                        verbosePrint("Adding socket with ID: {0}".format(dev.id))
-                        self.ikeaSockets[dev.id] = ikeaSocket(factory=self, device=dev)
+                        verbosePrint(
+                            "Adding socket with ID: {0}".format(dev.id))
+                        self.ikeaSockets[dev.id] = ikeaSocket(
+                            factory=self, device=dev)
             except Exception as e:
                 print("Unable to iterate devices")
 
             if self.groups:
                 try:
                     for group in self.groups:
-                        self.ikeaGroups[group.id] = ikeaGroup(factory=self, group=group)
+                        self.ikeaGroups[group.id] = ikeaGroup(
+                            factory=self, group=group)
                 except Exception as e:
                     print("Unable to iterate groups")
 
             if client != None:
-                client.transport.write(json.dumps({"action":"initGateway", "status": "Ok"}).encode(encoding='utf_8'))
+                client.transport.write(json.dumps(
+                    {"action": "initGateway", "status": "Ok"}).encode(encoding='utf_8'))
         else:
             if client != None:
-                client.transport.write(json.dumps({"action":"initGateway", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
+                client.transport.write(json.dumps(
+                    {"action": "initGateway", "status": "Failed", "error": "Connection timed out"}).encode(encoding='utf_8'))
 
     def sendDeviceList(self, client):
         devices = []
@@ -427,21 +278,25 @@ class AdaptorFactory(ServerFactory):
         for key, aDevice in self.ikeaLights.items():
             # print (aDevice.modelNumber)
             if not aDevice.modelNumber in deviceConfig:
-                verbosePrint("Device settings not found for {0}. Creating defaults!".format(aDevice.modelNumber))
-                if not aDevice.modelNumber == "": 
+                verbosePrint("Device settings not found for {0}. Creating defaults!".format(
+                    aDevice.modelNumber))
+                if not aDevice.modelNumber == "":
                     deviceConfig[aDevice.modelNumber] = deviceDefaults
                     configChanged = True
 
-            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
+            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Light", "Dimmable": stringToBool(
+                deviceConfig[aDevice.modelNumber]['dimmable']), "HasWB": stringToBool(deviceConfig[aDevice.modelNumber]['haswb']), "HasRGB": stringToBool(deviceConfig[aDevice.modelNumber]['hasrgb'])})
 
         # Outlets
         for key, aDevice in self.ikeaSockets.items():
-            devices.append({"DeviceID": aDevice.deviceID, "Name": aDevice.deviceName, "Type": "Outlet"})
+            devices.append({"DeviceID": aDevice.deviceID,
+                            "Name": aDevice.deviceName, "Type": "Outlet"})
 
         if self.groups:
             for key, aGroup in self.ikeaGroups.items():
                 #print (aGroup)
-                devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - "+aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
+                devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - " +
+                                aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
 
         if configChanged:
             with open(INIFILE, "w") as configfile:
@@ -449,10 +304,10 @@ class AdaptorFactory(ServerFactory):
 
         answer["action"] = "getLights"
         answer["status"] = "Ok"
-        answer["result"] =  devices
+        answer["result"] = devices
 
         verbosePrint(json.dumps(answer))
-        
+
         if client != None:
             client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
@@ -475,13 +330,14 @@ class AdaptorFactory(ServerFactory):
         setLevelCommand = None
         targetDevice = None
 
-        deviceID=int(deviceID)
+        deviceID = int(deviceID)
         target = None
 
         if deviceID in self.ikeaLights.keys():
             targetDeviceCommand = self.gateway.get_device(deviceID)
             targetDevice = self.api(targetDeviceCommand)
-            setLevelCommand = targetDevice.light_control.set_dimmer(level, transition_time=self.transitionTime)
+            setLevelCommand = targetDevice.light_control.set_dimmer(
+                level, transition_time=self.transitionTime)
             target = self.ikeaLights[deviceID]
             # Set
             self.api(setLevelCommand)
@@ -489,19 +345,20 @@ class AdaptorFactory(ServerFactory):
         if self.groups:
             if deviceID in self.ikeaGroups.keys():
                 # First set level
-                targetDevice=self.api(self.gateway.get_group(int(deviceID)))
-                setLevelCommand = targetDevice.set_dimmer(level, transition_time=self.transitionTime)
+                targetDevice = self.api(self.gateway.get_group(int(deviceID)))
+                setLevelCommand = targetDevice.set_dimmer(
+                    level, transition_time=self.transitionTime)
                 target = self.ikeaGroups[deviceID]
                 self.api(setLevelCommand)
 
                 # Then switch the group on
-             
+
                 setStateCommand = targetDevice.set_state(True)
                 target = self.ikeaGroups[deviceID]
                 self.api(setStateCommand)
-                
+
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
-  
+
         self.announceChanged()
 
     def setState(self, client, deviceID, state):
@@ -542,8 +399,8 @@ class AdaptorFactory(ServerFactory):
             self.api(setStateCommand)
         except Exception as e:
             print("Failed to set state")
-            answer["status"]="Failed"
-        
+            answer["status"] = "Failed"
+
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         self.announceChanged()
@@ -557,18 +414,20 @@ class AdaptorFactory(ServerFactory):
 
         if deviceID in self.ikeaLights.keys():
             targetDevice = self.api(self.gateway.get_device(int(deviceID)))
-            setStateCommand = targetDevice.light_control.set_hex_color(hex, transition_time=self.transitionTime)
+            setStateCommand = targetDevice.light_control.set_hex_color(
+                hex, transition_time=self.transitionTime)
 
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         self.announceChanged()
 
-    
+
 if __name__ == "__main__":
-    print ("IKEA-tradfri COAP-adaptor version {0} started (command line)!".format(version))
+    print(
+        "IKEA-tradfri COAP-adaptor version {0} started (command line)!".format(version))
     verbose = True
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dryrun", action="store_true")
 
@@ -576,12 +435,13 @@ if __name__ == "__main__":
 
     if args.dryrun:
         dryRun = True
-    
-    endpoints.serverFromString(reactor, "tcp:1234").listen(AdaptorFactory()).addErrback(error)
-    
+
+    endpoints.serverFromString(reactor, "tcp:1234").listen(
+        AdaptorFactory()).addErrback(error)
+
     if not currentError:
         reactor.run()
-    
+
 else:
     factory = AdaptorFactory()
     service = TCPServer(1234, factory)

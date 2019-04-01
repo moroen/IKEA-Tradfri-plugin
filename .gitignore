@@ -1,0 +1,11 @@
+# Envir
+.direnv/
+.vscode/
+.vs/
+
+.envrc
+
+# Python
+__pycache__
+.eggs
+*.egg-info
