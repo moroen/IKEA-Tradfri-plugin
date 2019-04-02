@@ -16,6 +16,8 @@ from pytradfri import Gateway
 from pytradfri.api.libcoap_api import APIFactory
 from pytradfri import error as tradfriError
 
+# Kludge to support rel. imports when running via twisted
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from ikeatradfri.device_classes import ikeaGroup, ikeaLight, ikeaSocket
 
 version = "0.8.8"
@@ -28,7 +30,6 @@ hostConfig = {}
 def verbosePrint(txt):
     if verbose:
         print(txt)
-
 
 INIFILE = "{0}/devices.ini".format(os.path.dirname(os.path.realpath(__file__)))
 deviceDefaults = {"Dimmable": True, "HasWB": True, "HasRGB": False}
