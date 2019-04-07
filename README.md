@@ -23,19 +23,24 @@ The plugin doesn't work with:
 5. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
 
 ## Local Installation
-### 1. Install libcoap
+### Install required tools and libraries
+```shell
+$ sudo apt-get install build-essential autoconf automake libtool
+```
+
+### 2. Install libcoap
 
 The provided install-coap-client script will try to download, compile and install libcoap. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
 ```shell
   $ bash ./install-coap-client.sh
 ```
 
-### 2. Install pytradfri-library 
+### 3. Install pytradfri-library 
 ```shell
   $ pip3 install pytradfri
 ```
 
-### 3. Install twisted
+### 4. Install twisted
 ```
 $ pip3 install twisted
 ```
@@ -44,19 +49,19 @@ Note: Depending on the setup (i.e raspbian), it might be necessary to install tw
 $ sudo pip3 install twisted
 ```
 
-### 4. Clone IKEA-tradfri plugin into domoticz plugins-directory
+### 5. Clone IKEA-tradfri plugin into domoticz plugins-directory
 ```
 ~/$ cd /opt/domoticz/plugins/
 /opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 ```
 
-### 5. Configure the Tradfri COAP-adapter: 
+### 6. Configure the Tradfri COAP-adapter: 
 ```shell
   $ ./configure.py config IP GATEWAY-KEY
 ```
 where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
-### 6. Enable COAP-adaptor
+### 7. Enable COAP-adaptor
 
 #### From prompt (for testing)
 ```
