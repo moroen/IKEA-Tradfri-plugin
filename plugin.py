@@ -43,8 +43,9 @@
 """
 import Domoticz
 import json
-import datetime
-from ikeatradfri import colors
+import datetime,sys
+
+import colors
 
 
 colorOption = ""
