@@ -87,11 +87,11 @@ class BasePlugin:
 
         whiteLevelNames, whiteLevelActions = colors.wbLevelDefinitions()
         WhiteOptions = {"LevelActions": whiteLevelActions,
-                        "LevelNames": whiteLevelNames, "LevelOffHidden": "true", "SelectorStyle": "0"}
+                        "LevelNames": whiteLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
 
         colorLevelNames, colorLevelActions = colors.colorLevelDefinitions()
         colorOptions = {"LevelActions": colorLevelActions,
-                        "LevelNames": colorLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
+                        "LevelNames": colorLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
 
         ikeaIds = []
         # Add unregistred lights
@@ -109,7 +109,7 @@ class BasePlugin:
                         "DeviceID": aLight['DeviceID'], "Unit": i}
                     i = i+1
 
-                if aLight["Type"] == "Battery_Level":
+                if aLight["Type"] == "Remote":
                     Domoticz.Device(Name=aLight["Name"] + " - Battery level",
                                     Unit=i,  Type=243, Subtype=6, DeviceID=devID).Create()
                     self.lights[devID] = {
@@ -135,31 +135,34 @@ class BasePlugin:
                         "DeviceID": aLight['DeviceID'], "Unit": i}
                     i = i+1
 
-                    if str(aLight["HasRGB"]).lower() == "true":
+                    if aLight["Colorspace"] == "W":
+                        continue
+
+                    if str(aLight["Colorspace"]) == "CWS":
                         Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
                                         Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
                         self.lights[devID +
                                     ":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
                         i = i+1
 
-                        Domoticz.Device(Name=aLight['Name'] + " - RGB",  Unit=i, Type=241,
-                                        Subtype=2, Switchtype=7, DeviceID=devID+":RGB").Create()
-                        self.lights[devID +
-                                    ":RGB"] = {"DeviceID": devID+":RGB", "Unit": i}
-                        i = i+1
+                        # Domoticz.Device(Name=aLight['Name'] + " - RGB",  Unit=i, Type=241,
+                        #                Subtype=2, Switchtype=7, DeviceID=devID+":RGB").Create()
+                        #self.lights[devID +
+                        #            ":RGB"] = {"DeviceID": devID+":RGB", "Unit": i}
+                        # i = i+1
 
-                    if str(aLight['HasWB']).lower() == "true":
-                        Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=i, TypeName="Selector Switch",
-                                        Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
+                    if aLight['Colorspace'] == "WS":
+                        Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
+                                        Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WS").Create()
                         self.lights[devID +
-                                    ":WB"] = {"DeviceID": devID+":WB", "Unit": i}
+                                    ":WS"] = {"DeviceID": devID+":WS", "Unit": i}
                         i = i+1
 
         # Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
             devID = str(Devices[aUnit].DeviceID)
 
-            if devID[-3:] == ":WB":
+            if devID[-3:] == ":WS":
                 devID = devID[:-3]
 
             if devID[-4:] == ":CWS":
@@ -175,12 +178,12 @@ class BasePlugin:
         self.updateDeviceState(ikeaDevices)
 
     def updateDeviceState(self, deviceState):
-        Domoticz.Debug(
-            "UpdateDeviceState called with: {0}".format(deviceState))
-
         for aDev in deviceState:
 
             if aDev["Type"] == "Battery_Level":
+                continue
+
+            if aDev["Type"] == "Remote":
                 continue
 
             devID = str(aDev["DeviceID"])
@@ -193,7 +196,8 @@ class BasePlugin:
             if str(aDev["State"]).lower() == "false":
                 nVal = 0
 
-            if "Level" in aDev:
+            if aDev["Type"] == "Light":
+                Domoticz.Debug("Level: {0}".format(aDev["Level"]))
                 sValInt = int((aDev["Level"]/250)*100)
                 sVal = str(sValInt)
             else:
@@ -203,8 +207,8 @@ class BasePlugin:
 
             if "Hex" in aDev:
                 if aDev["Hex"] != None:
-                    if devID+":WB" in self.lights:
-                        wbdevID = devID+":WB"
+                    if devID+":WS" in self.lights:
+                        wbdevID = devID+":WS"
                         targetUnit = self.lights[wbdevID]['Unit']
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(
                             colors.wbLevelForHex(aDev['Hex'])))
@@ -330,7 +334,7 @@ class BasePlugin:
                                      "action": "setState", "state": "Off", "deviceID": devId[0]})
 
                 else:
-                    if devId[1] == "WB":
+                    if devId[1] == "WS":
                         self.sendMessage(self.CoapAdapter, {
                                          "action": "setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]})
                     if devId[1] == "CWS":

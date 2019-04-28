@@ -1,5 +1,5 @@
-hex_colors = {
-    0: {"Name": "Off", "Hex": '000000'},
+COLORS = {
+    0:  {"Name": "Off", "Hex": '000000'},
     10: {"Name": "Blue", "Hex": '4a418a'},
     20: {"Name": "Candlelight", "Hex": 'ebb63e'},
     30: {"Name": "Cold sky", "Hex": 'dcf0f8'},
@@ -22,9 +22,49 @@ hex_colors = {
     200: {"Name": "Warm white", "Hex": 'f1e0b5'}
 }
 
-hex_whites = {
-    0: {"Name": "Off", "Hex": '000000'},
+WB = {
+    0:  {"Name": "Off", "Hex": '000000'},
     10: {"Name": "Cold", "Hex": 'f5faf6'},
     20: {"Name": "Normal", "Hex": 'f1e0b5'},
     30: {"Name": "Warm", "Hex": 'efd275'}
 }
+
+
+TEST = { "a":"Test", "b":"Test"}
+
+d = {'x': 1, 'y': 2, 'z': 3} 
+
+def color(level):
+    return COLORS[level]
+
+def wb(level):
+    return WB[level]
+
+def colorLevelDefinitions():
+    levels=""
+    actions=""
+    for key, aColor in sorted(COLORS.items()):
+        levels="{0}{1}|".format(levels, aColor["Name"])
+        actions="{0}{1}|".format(actions, "")
+
+    return levels[:-1], actions[:-1]
+
+def colorLevelForHex(hex):
+    for key in COLORS:
+        if COLORS[key]["Hex"] == hex:
+            return key
+            
+
+def wbLevelForHex(hex):
+    for key in WB:
+        if WB[key]["Hex"] == hex:
+            return key
+
+def wbLevelDefinitions():
+    levels=""
+    actions=""
+    for key, aColor in sorted(WB.items()):
+        levels="{0}{1}|".format(levels, aColor["Name"])
+        actions="{0}{1}|".format(actions, "")
+
+    return levels[:-1], actions[:-1]
