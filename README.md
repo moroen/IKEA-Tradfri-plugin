@@ -61,6 +61,11 @@ $ sudo pip3 install twisted
 ```
 where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
+If configure.py fails, try running with the debug option:
+```shell
+  $ ./configure.py --debug config IP GATEWAY-KEY
+```
+
 ### 7. Enable COAP-adaptor
 
 #### From prompt (for testing)
