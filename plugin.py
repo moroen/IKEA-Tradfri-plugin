@@ -286,7 +286,7 @@ class BasePlugin:
 
             if action == "initGateway":
                 # Config set
-                self.sendMessage(Connection, {"action": "getDevices"})
+                self.sendMessage(Connection, {"action": "getDevices", "groups": Parameters["Mode3"], "battery_levels": Parameters["Mode1"]})
 
             if action == "getDevices":
                 self.registerDevices(command['result'])
