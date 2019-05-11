@@ -153,10 +153,13 @@ class AdaptorFactory(ServerFactory):
         if dryRun:
             self.initGateway(None, None)
             self.sendDeviceList(None)
-            self.setState(None, "65548", False)
+            target = next(iter(self.ikeaLights.values()))
+            # print("{}:{}".format(target.deviceID, target.lastState))
+            self.setState(None, target.deviceID, not target.lastState)
             print("Sleeping for 10 seconds before announceChanged")
             time.sleep(10)
-            self.announceChanged()
+            # self.announceChanged()
+            self.setState(None, target.deviceID, not target.lastState)
             exit()
 
     def logout(self):
@@ -164,6 +167,7 @@ class AdaptorFactory(ServerFactory):
         reactor.stop()
 
     def buildProtocol(self, addr):
+
         return CoapAdapter(self)
 
     def announceChanged(self):
@@ -402,7 +406,8 @@ class AdaptorFactory(ServerFactory):
             print("Failed to set state")
             answer["status"] = "Failed"
 
-        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+        if client is not None:
+            client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
         self.announceChanged()
 
