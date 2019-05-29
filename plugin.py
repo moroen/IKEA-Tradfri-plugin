@@ -291,7 +291,7 @@ class BasePlugin:
             if action == "getDevices":
                 self.registerDevices(command['result'])
 
-            if action == "deviceUpdate":
+            if action == "getChanges":
                 self.updateDeviceState(command['result'])
 
             if action == "setState" or action == "setLevel" or action == "setHex":
@@ -360,8 +360,7 @@ class BasePlugin:
                 interval = (datetime.datetime.now()-self.lastPollTime).seconds
                 if interval+1 > self.pollInterval:
                     self.lastPollTime = datetime.datetime.now()
-                    self.sendMessage(self.CoapAdapter, {
-                                     "action": "announceChanged"})
+                    self.sendMessage(self.CoapAdapter, {"action": "getChanges", "groups": Parameters["Mode3"], "battery_levels": Parameters["Mode1"]})
 
             if Parameters["Mode1"] == "True":
                 # Poll batteries
