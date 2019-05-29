@@ -28,11 +28,7 @@ WORKDIR /usr/src/app
 COPY tradfri.tac /usr/src/app
 COPY configure.py /usr/src/app
 COPY adapter_start.sh /usr/src/app
-<<<<<<< HEAD
 COPY ikeatradfri /usr/src/app/ikeatradfri
-=======
-COPY ikeatradfri /usr/src/app
->>>>>>> 6b822ac6255023c6f3df5fdb170dfab7ef26061f
 
 EXPOSE 1234
 CMD /usr/src/app/adapter_start.sh
