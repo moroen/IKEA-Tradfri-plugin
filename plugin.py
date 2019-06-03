@@ -96,12 +96,11 @@ class BasePlugin:
         ikeaIds = []
         # Add unregistred lights
         for aLight in ikeaDevices:
-            Domoticz.Debug("Registering: {0}".format(json.dumps(aLight)))
-
             devID = str(aLight['DeviceID'])
             ikeaIds.append(devID)
 
             if not devID in self.lights:
+                Domoticz.Debug("Registering: {0} - {1}".format(aLight["DeviceID"], aLight["Name"]))
                 if aLight["Type"] == "Outlet":
                     Domoticz.Device(Name=aLight['Name'], Unit=i, Type=244,
                                     Subtype=73, Switchtype=0, Image=1, DeviceID=devID).Create()
@@ -138,25 +137,21 @@ class BasePlugin:
                     if aLight["Colorspace"] == "W":
                         continue
 
-                    if str(aLight["Colorspace"]) == "CWS":
-                        Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
-                                        Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
-                        self.lights[devID +
-                                    ":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
-                        i = i+1
+            if str(aLight["Colorspace"]) == "CWS" and devID+":CWS" not in self.lights:
+                Domoticz.Debug("Registering: {0}:CWS".format(aLight["DeviceID"]))
+                Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
+                                Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
+                self.lights[devID +
+                            ":CWS"] = {"DeviceID": devID+":CWS", "Unit": i}
+                i = i+1
 
-                        # Domoticz.Device(Name=aLight['Name'] + " - RGB",  Unit=i, Type=241,
-                        #                Subtype=2, Switchtype=7, DeviceID=devID+":RGB").Create()
-                        #self.lights[devID +
-                        #            ":RGB"] = {"DeviceID": devID+":RGB", "Unit": i}
-                        # i = i+1
-
-                    if aLight['Colorspace'] == "WS":
-                        Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
-                                        Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WS").Create()
-                        self.lights[devID +
-                                    ":WS"] = {"DeviceID": devID+":WS", "Unit": i}
-                        i = i+1
+            if aLight['Colorspace'] == "WS" and devID+":WS" not in self.lights:
+                Domoticz.Debug("Registering: {0}:WS".format(aLight["DeviceID"]))
+                Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=i, TypeName="Selector Switch",
+                                Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WS").Create()
+                self.lights[devID +
+                            ":WS"] = {"DeviceID": devID+":WS", "Unit": i}
+                i = i+1
 
         # Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -197,6 +192,10 @@ class BasePlugin:
                 nVal = 0
 
             if aDev["Type"] == "Light":
+                Domoticz.Debug("Level: {0}".format(aDev["Level"]))
+                sValInt = int((aDev["Level"]/250)*100)
+                sVal = str(sValInt)
+            elif aDev["Type"] == "Group":
                 Domoticz.Debug("Level: {0}".format(aDev["Level"]))
                 sValInt = int((aDev["Level"]/250)*100)
                 sVal = str(sValInt)
