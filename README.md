@@ -2,7 +2,7 @@ A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
 # Plugin
 
-Since domoticz plugins doesn't support COAP and also doesn't allow threads or async calls, the IKEA-tradfri plugin contains two parts, the domoticz plugin and a python3 IKEA-tradfri adaptor written with the twisted framework. The adaptor needs to be running at all times, and is intented to be run as a service using systemd.
+Since domoticz plugins doesn't support COAP and also doesn't allow threads or async calls, the IKEA-tradfri plugin contains two parts, the domoticz plugin and a python3 IKEA-tradfri adaptor. The adaptor needs to be running at all times, and is intented to be run as a service using systemd.
 
 # What's supported
 The plugin supports and is able to controll the following devices:
@@ -19,49 +19,62 @@ The plugin doesn't work with:
 
 
 ## Requirements:
-1. Python version 3.5.3 or higher
+1. Python version 3.5.3 or higher, 3.7.x recommended. 
 2. Domoticz compiled with support for Python-Plugins. 
-3. Python library pytradfri by ggravlingen (https://github.com/ggravlingen/pytradfri). Required version: 6.0.1.
-4. Twisted (https://twistedmatrix.com/trac/)
-5. IKEA-Tradfri-plugin (https://github.com/moroen/IKEA-Tradfri-plugin)
+3. IKEA-Tradfri command line utility (https://github.com/moroen/ikea-tradfri)
+
 
 ## Local Installation
-### 1. Install libcoap
+### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory
+```
+$ cd domoticz/plugins/
+$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
+$ cd IKEA-Tradfri
+```
 
-The provided install-coap-client script will try to download, compile and install libcoap. Some steps will require root-access via sudo, and as such the scipt will ask for your password.
+### 2. Virtual python environment
+Using a virtual environment is supported and recommended. Any python virtual environment tool should work, built in is recommended:
 ```shell
-  $ bash ./install-coap-client.sh
+  $ python3 -m venv env
+  $ source env/bin/activate
 ```
 
-### 2. Install required python packages
+### 3. Update pip and setuptools
 ```shell
-  $ pip3 install pytradfri
-```
-```
-$ pip3 install twisted
-```
-Note: Depending on the setup (i.e raspbian), it might be necessary to install twisted using sudo:
-```
-$ sudo pip3 install twisted
+  $ pip3 install --upgrade pip
+  $ pip3 install --upgrade setuptools
 ```
 
-### 3. Clone IKEA-tradfri plugin into domoticz plugins-directory
+### 4. Install tradfri command line tool and required python packages
+```shell
+  $ python3 setup.py install
 ```
-~/$ cd /opt/domoticz/plugins/
-/opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
+#### Note: For python 3.5.3, install using setup.py fails intermittently. Installing required packages with pip before running setup.py works around this issue:
+```shell
+  $ pip3 install -r requirements.txt
+  $ python3 setup.py install
 ```
 
 ### 4. Configure the Tradfri COAP-adapter: 
 ```shell
-  $ ./configure.py config IP GATEWAY-KEY
+  $ tradfri config IP GATEWAY-KEY
 ```
 where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
-### 5. Enable COAP-adaptor
+### 5. Check communication with the gateway:
+```shell
+  $ tradfri list
+```
+For a full set of commands, try:
+```shell
+  $ tradfri list
+```
+
+### 6. Enable COAP-adaptor
 
 #### From prompt (for testing)
-```
-/opt/domoticz/plugins/IKEA-Tradfri$ python3 tradfri.tac
+```shell
+$ tradfri --verbose server
 ```
 
 #### Using systemd
@@ -69,14 +82,12 @@ where IP is the address of the gateway, and GATEWAY-KEY is the security-key loca
 ```shell
   $ ./configure.py service create
 ```
-
-This should be run from the IKEA-Tradfri directoy, and as the user indented to run the adapter. To specify another user or group, use the --user and --group flags:
+   - This should be run from the IKEA-Tradfri directory, and as the user indented to run the adapter. To specify another user or group, use the --user and --group flags:
 
 ```shell
-  $ ./configure.py service create --user domoticz --group domogroup
+  $ tradfri service create --user domoticz --group domogroup
 ```
-
-Note: If only --user is specified, the group will be set to the same name as the user
+   * Note: If only --user is specified, the group will be set to the same name as the user
 
 2. Verify that the generated ikea-tradfri.service-file has the correct paths and user, then copy the service-file to systemd-service directory, reload systemd-daemon and start the IKEA-tradfri service:
 ```shell
@@ -85,15 +96,8 @@ Note: If only --user is specified, the group will be set to the same name as the
   $ sudo systemctl start ikea-tradfri.service
 ```
 
-Optionally use configure.py to install the service-file in the correct location:
+3. Using systemd to start the COAP-adaptor on startup
 ```shell
-  $ ./configure.py service install
-  $ sudo systemctl daemon-reload
-  $ sudo systemctl start ikea-tradfri.service
-```
-
-#### Using systemd to start the COAP-adaptor on startup
-```
 $ sudo systemctl enable ikea-tradfri.service
 ```
 
@@ -113,37 +117,7 @@ Then restart domoticz and on the hardware-page, select the IKEA-Plugin, change t
 
 ## Docker Installation
 
-Put IKEA gateway IP and preshared key from sticker into GW_config file.
-
-To run the plugin in a Docker (for example to on a Synology NAS), package the adapter using the provided Docker build file:
-```
-docker build -t ikea-tradfri-plugin:latest .
-```
-RPI docker build:
-```
-docker build -t ikea-tradfri-plugin:latest . -f DockerfileRPI
-```
-
-Copy the docker image to the system running Domoticz and start the Docker instance:
-```
-docker run -d \
-  --name ikea-tradfri-plugin \
-  --restart unless-stopped \
-  --env-file=GW_config \
-  -p 1234:1234 \
-  ikea-tradfri-plugin
-```
-config.json file will be created automaticaly.
-
-Now the IKEA Tradfri to Domoticz adaptor is available on the localhost.
-
-Clone IKEA-tradfri plugin into Domoticz plugins-directory
-```
-~/$ cd /opt/domoticz/plugins/
-/opt/domoticz/plugins$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
-```
-
-Restart Domoticz and the plugin should show up. When the plugin is loaded, the adaptor running in the Docker is automatically used.
+It's possible to run the adapter as a docker container app. Please refer to IKEA-tradfri (https://github.com/moroen/ikea-tradfri) for instructions. 
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
