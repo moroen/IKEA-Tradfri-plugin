@@ -59,7 +59,7 @@ Using a virtual environment is supported and recommended. Any python virtual env
 ```shell
   $ tradfri config IP GATEWAY-KEY
 ```
-where IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
+  * IP is the address of the gateway, and GATEWAY-KEY is the security-key located on the bottom of the gateway.
 
 ### 5. Check communication with the gateway:
 ```shell
@@ -67,8 +67,9 @@ where IP is the address of the gateway, and GATEWAY-KEY is the security-key loca
 ```
 For a full set of commands, try:
 ```shell
-  $ tradfri list
+  $ tradfri --help
 ```
+  * Note: The tradfri command line tool is a work in progress, some commands might not work as expected or indeed work at all!
 
 ### 6. Enable COAP-adaptor
 
@@ -80,7 +81,7 @@ $ tradfri --verbose server
 #### Using systemd
 1. Create a (reasonably sane) systemd-service file:
 ```shell
-  $ ./configure.py service create
+  $ tradfri service create
 ```
    - This should be run from the IKEA-Tradfri directory, and as the user indented to run the adapter. To specify another user or group, use the --user and --group flags:
 
