@@ -5,7 +5,7 @@ Description=IKEA Tradfri COAP-adapter
 Type=simple
 ExecStart=$twistd --nodaemon \
       --rundir=$path \
-      --pidfile=$path/twistd.pid \
+      --pidfile=\
       --python=$path/tradfri.tac
 
 User=$user
