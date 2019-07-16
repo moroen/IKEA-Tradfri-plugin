@@ -103,6 +103,8 @@ class BasePlugin:
 
                     if not "HasRGB" in aLight:
                         aLight["HasRGB"] = "false"
+                    if aLight["Type"] == "Group":
+                        aLight["HasRGB"] = "true"
 
                     if aLight['Dimmable']:
                         switchType = 7

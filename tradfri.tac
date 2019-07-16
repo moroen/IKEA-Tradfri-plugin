@@ -423,6 +423,12 @@ class AdaptorFactory(ServerFactory):
             setStateCommand = targetDevice.light_control.set_hex_color(
                 hex, transition_time=self.transitionTime)
 
+        # Device is a group
+        if self.groups:
+            if deviceID in self.ikeaGroups.keys():
+                targetDevice = self.api(self.gateway.get_group(int(deviceID)))
+                setStateCommand = targetDevice.set_hex_color(hex, transition_time=self.transitionTime)
+
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
 
