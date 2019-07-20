@@ -363,12 +363,7 @@ class BasePlugin:
                         self.CoapAdapter.Send(Message=json.dumps(
                                   {"action": "setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
                     else:
-                    #    if self.lights[Devices[Unit].DeviceID]["Type"] == "Group":
-                    #        for member in self.lights[Devices[Unit].DeviceID]["Members"]:
-                    #            if str(member)+":CWS" in self.lights:
-                    #                light = self.lights[str(member)+":CWS"]
-                    #                device = Devices[light["Unit"]]
-                    #                device.Update(nValue=210, sValue=str(colors.colorLevelForHex("ffffff")))
+                        # Enter Psychedelic mode
                         Devices[Unit].Update(nValue=210, sValue=str(colors.colorLevelForHex("ffffff")))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
