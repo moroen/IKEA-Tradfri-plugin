@@ -150,6 +150,7 @@ class ikeaLight():
 class ikeaGroup():
     deviceID = None
     deviceName = None
+    members = None
     lastState = None
     lastLevel = None
     factory = None
@@ -157,6 +158,7 @@ class ikeaGroup():
     def __init__(self, factory, group):
         self.deviceID = group.id
         self.deviceName = group.name
+        self.members = group.raw['9018']['15002']['9003']
         self.lastState = group.state
         self.lastLevel = group.dimmer
         self.factory = factory
