@@ -19,7 +19,8 @@ COLORS = {
     170: {"Name": "Yellow", "Hex": 'd6e44b'},
     180: {"Name": "Warm Amber", "Hex": 'e78834'},
     190: {"Name": "Warm glow", "Hex": 'efd275'},
-    200: {"Name": "Warm white", "Hex": 'f1e0b5'}
+    200: {"Name": "Warm white", "Hex": 'f1e0b5'},
+    210: {"Name": "Psychedelic", "Hex": 'ffffff'}
 }
 
 WB = {
@@ -40,12 +41,13 @@ def color(level):
 def wb(level):
     return WB[level]
 
-def colorLevelDefinitions():
+def colorLevelDefinitions(includePsychedelic=False):
     levels=""
     actions=""
     for key, aColor in sorted(COLORS.items()):
-        levels="{0}{1}|".format(levels, aColor["Name"])
-        actions="{0}{1}|".format(actions, "")
+        if aColor["Name"]!="Psychedelic" or includePsychedelic:
+            levels="{0}{1}|".format(levels, aColor["Name"])
+            actions="{0}{1}|".format(actions, "")
 
     return levels[:-1], actions[:-1]
 

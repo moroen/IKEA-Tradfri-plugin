@@ -114,6 +114,9 @@ class CoapAdapter(TelnetProtocol):
             if command['action'] == "setHex":
                 self.factory.setHex(self, command["deviceID"], command['hex'])
 
+            if command['action'] == "setXY":
+                self.factory.setXY(self, command["deviceID"], command['x'], command['y'])
+
             if command['action'] == "announceChanged":
                 self.factory.announceChanged()
 
@@ -234,6 +237,7 @@ class AdaptorFactory(ServerFactory):
                 self.devices = self.api(self.api(self.gateway.get_devices()))
                 if self.groups:
                     self.groups = self.api(self.api(self.gateway.get_groups()))
+                    print("get_groups result: "+str(self.groups))
             except tradfriError.RequestTimeout:
                 print("Error in initGateway: Request timeout")
                 client.transport.loseConnection()
@@ -299,9 +303,9 @@ class AdaptorFactory(ServerFactory):
 
         if self.groups:
             for key, aGroup in self.ikeaGroups.items():
-                #print (aGroup)
+                print (aGroup)
                 devices.append({"DeviceID": aGroup.deviceID, "Name": "Group - " +
-                                aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False})
+                                aGroup.deviceName, "Type": "Group", "Dimmable": True, "HasWB": False, "Members": aGroup.members})
 
         if configChanged:
             with open(INIFILE, "w") as configfile:
@@ -428,6 +432,29 @@ class AdaptorFactory(ServerFactory):
             if deviceID in self.ikeaGroups.keys():
                 targetDevice = self.api(self.gateway.get_group(int(deviceID)))
                 setStateCommand = targetDevice.set_hex_color(hex, transition_time=self.transitionTime)
+
+        self.api(setStateCommand)
+        client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
+
+        self.announceChanged()
+
+    def setXY(self, client, deviceID, x, y):
+        answer = {}
+        answer["action"] = "setXY"
+        answer["status"] = "Ok"
+
+        deviceID = int(deviceID)
+
+        if deviceID in self.ikeaLights.keys():
+            targetDevice = self.api(self.gateway.get_device(int(deviceID)))
+            setStateCommand = targetDevice.light_control.set_xy_color(
+                x, y, transition_time=self.transitionTime)
+
+        # Device is a group
+        if self.groups:
+            if deviceID in self.ikeaGroups.keys():
+                targetDevice = self.api(self.gateway.get_group(int(deviceID)))
+                setStateCommand = targetDevice.set_xy_color(x, y, transition_time=self.transitionTime)
 
         self.api(setStateCommand)
         client.transport.write(json.dumps(answer).encode(encoding='utf_8'))
