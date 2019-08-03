@@ -87,11 +87,11 @@ class BasePlugin:
 
         whiteLevelNames, whiteLevelActions = colors.wbLevelDefinitions()
         WhiteOptions = {"LevelActions": whiteLevelActions,
-                        "LevelNames": whiteLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
+                        "LevelNames": whiteLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
 
         colorLevelNames, colorLevelActions = colors.colorLevelDefinitions()
         colorOptions = {"LevelActions": colorLevelActions,
-                        "LevelNames": colorLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
+                        "LevelNames": colorLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
 
         ikeaIds = []
         # Add unregistred lights
