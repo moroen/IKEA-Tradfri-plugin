@@ -47,7 +47,6 @@ import datetime,sys
 
 import colors
 
-
 colorOption = ""
 
 
@@ -85,13 +84,13 @@ class BasePlugin:
         else:
             i = max(Devices)+1
 
-        whiteLevelNames, whiteLevelActions = colors.wbLevelDefinitions()
+        whiteLevelNames, whiteLevelActions = colors.color_level_definitions(colorspace="WS")
         WhiteOptions = {"LevelActions": whiteLevelActions,
-                        "LevelNames": whiteLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
+                        "LevelNames": whiteLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
 
-        colorLevelNames, colorLevelActions = colors.colorLevelDefinitions()
+        colorLevelNames, colorLevelActions = colors.color_level_definitions(colorspace="CWS")
         colorOptions = {"LevelActions": colorLevelActions,
-                        "LevelNames": colorLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
+                        "LevelNames": colorLevelNames, "LevelOffHidden": "true", "SelectorStyle": "1"}
 
         ikeaIds = []
         # Add unregistred lights
@@ -210,13 +209,14 @@ class BasePlugin:
                         wbdevID = devID+":WS"
                         targetUnit = self.lights[wbdevID]['Unit']
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                            colors.wbLevelForHex(aDev['Hex'])))
+                            colors.color_level_for_hex(aDev['Hex'], colorspace="WS")))
+                            
 
                     if devID+":CWS" in self.lights:
                         wbdevID = devID+":CWS"
                         targetUnit = self.lights[wbdevID]['Unit']
                         Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                            colors.colorLevelForHex(aDev['Hex'])))
+                            colors.color_level_for_hex(aDev['Hex'], colorspace="CWS")))
 
     def updateBatteryStatus(self, batteryStatus):
         for aDev in batteryStatus:
@@ -265,7 +265,7 @@ class BasePlugin:
         if (Status == 0):
             Domoticz.Log("Connected successfully to: "+Parameters["Address"])
             self.sendMessage(Connection, {"action": "initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters[
-                             'Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"], "battery_levels": Parameters["Mode1"]})
+                             'Mode4'], "groups": Parameters["Mode3"], "battery_levels": Parameters["Mode1"]})
         else:
             Domoticz.Log(
                 "Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
@@ -335,10 +335,10 @@ class BasePlugin:
                 else:
                     if devId[1] == "WS":
                         self.sendMessage(self.CoapAdapter, {
-                                         "action": "setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]})
+                                         "action": "setHex", "deviceID": devId[0], "hex": colors.color(Level, colorspace="WS")["Hex"]})
                     if devId[1] == "CWS":
                         self.sendMessage(self.CoapAdapter, {
-                                         "action": "setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]})
+                                         "action": "setHex", "deviceID": devId[0], "hex": colors.color(Level, colorspace="CWS")["Hex"]})
             else:
                 targetLevel = int(int(Level)*250/100)
                 self.sendMessage(self.CoapAdapter, {
