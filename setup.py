@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='IKEA-Tradfri-plugin',
-    version='0.0.1',
+    version='2.0.0',
     url='https://github.com/moroen/IKEA-Tradfri-plugin',
     author='moroen',
     author_email='moroen@gmail.com',
