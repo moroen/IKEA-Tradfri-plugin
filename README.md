@@ -75,7 +75,12 @@ For a full set of commands, try:
 
 #### From prompt (for testing)
 ```shell
-$ tradfri --verbose server
+$ tradfri -v server
+```
+
+#### From prompt (for debug)
+```shell
+$ tradfri -vv server
 ```
 
 #### Using systemd
@@ -83,7 +88,9 @@ $ tradfri --verbose server
 ```shell
   $ tradfri service create
 ```
-   - This should be run from the IKEA-Tradfri directory, and as the user indented to run the adapter. To specify another user or group, use the --user and --group flags:
+   - This should be run from the IKEA-Tradfri directory. If the tradfri command line tool has been installed in a virtual environment, make sure the virtual environment is activated before creating the service-file. 
+   
+   - By default, the service-file will set the service to run as the user running the tradfri command. To specify another user or group, use the --user and --group flags:
 
 ```shell
   $ tradfri service create --user domoticz --group domogroup
@@ -106,8 +113,6 @@ $ sudo systemctl enable ikea-tradfri.service
 Input the IP of the host where the adapter is running.
 NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and the adapter on the same machine, the default IP (localhost / 127.0.0.1) should work. 
 
-To get domoticz to recognize changed states (using IKEA-remote, app or any other way of switching lights), observe changes must be enabled in the plugin-settings page and a reasonable polling intervall specified. 
-
 ### Observing changes
 To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 5, and the intervall should be a multiple of 5 seconds. Using to short an interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
 
@@ -115,6 +120,11 @@ To observe changes to buld or socket when switched using another method than dom
 After upgrading to the lastest version, make sure to configure the adapter as described above.
 
 Then restart domoticz and on the hardware-page, select the IKEA-Plugin, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and press "Update".
+
+All regular devices (light, sockets, drivers) should upgrade without intervension. The code for color devices (white balance and full color) has been completely rewritten, and on first upgrade the old color devices will be removed and new devices for setting white balanse (WS) and color (CWS) will be created. 
+
+### A note about colors
+When using a CWS (color) bulb, a CWS color selector device is created. Due to a known limitation when setting levels in Domoticz scenes, it's only possible to specify the first half of the available colors in a scene. Selecting a color from the last half, gives the color for level 100 (lime) when the scene is activated. A workaround for this is planned, but currently not implemented. 
 
 ## Docker Installation
 
