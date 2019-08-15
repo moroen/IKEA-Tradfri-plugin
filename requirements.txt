@@ -8,5 +8,5 @@ Cython==0.29.10
 DTLSSocket==0.1.9
 idna==2.8
 multidict==4.5.2
-pytradfri==6.0.1
+pytradfri==6.1.0
 yarl==1.3.0
