@@ -3,7 +3,7 @@
 # Author: moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="1.1.1" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri" author="moroen" version="2.0.0" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <params>
         <param field="Address" label="Adaptor IP Address" width="200px" required="true" default="127.0.0.1"/>
         <param field="Mode2" label="Observe changes" width="75px">
@@ -13,9 +13,9 @@
             </options>
         </param>
 
-        <param field="Mode5" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
-
         <param field="Mode4" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
+
+        <param field="Mode5" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
 
         <param field="Mode3" label="Add groups as devices" width="75px">
             <options>
@@ -24,7 +24,7 @@
             </options>
         </param>
 
-        <param field="Mode1" label="Add psychedelic color change" width="75px">
+        <param field="Mode1" label="Monitor battry levels" width="75px">
             <options>
                 <option label="Yes" value="True"/>
                 <option label="No" value="False"  default="true" />
@@ -43,18 +43,17 @@
 """
 import Domoticz
 import json
-import datetime
-from ikeatradfri import colors
-from random import randint
+import datetime, sys
 
+import colors
 
 colorOption = ""
 
 
 class BasePlugin:
-    #enabled = False
-    #api = None
-    #gateway = None
+    # enabled = False
+    # api = None
+    # gateway = None
 
     pluginStatus = 0
     # Dict of registered lights
@@ -66,200 +65,234 @@ class BasePlugin:
     lastPollTime = None
     pollInterval = None
 
+    lastBattryPollTime = None
+    batteryPollInterval = 3600
+
     def __init__(self):
         self.pluginStatus = 0
         self.lastPollTime = datetime.datetime.now()
+        self.lastBattryPollTime = datetime.datetime.now()
         return
 
     def unitOfUnit(self, i):
         return Devices[i]
 
-    def atLeastOneRGBgroupMember(self, group):
-        if "Members" not in group:
-            return "false"
-        for member in group["Members"]:
-            if str(member)+":CWS" in self.lights:
-                return "true"
-        return "false"
-
-    def registerDevice(self, aLight):
-        Domoticz.Debug("Registering: {0}".format(json.dumps(aLight)))
-
-        whiteLevelNames, whiteLevelActions = colors.wbLevelDefinitions()
-        WhiteOptions = {"LevelActions": whiteLevelActions,
-                        "LevelNames": whiteLevelNames, "LevelOffHidden": "true", "SelectorStyle": "0"}
-
-        Domoticz.Log("colordef "+str(colors.colorLevelDefinitions(Parameters["Mode1"]=="True")))
-        colorLevelNames, colorLevelActions = colors.colorLevelDefinitions(Parameters["Mode1"]=="True")
-        colorOptions = {"LevelActions": colorLevelActions,
-                        "LevelNames": colorLevelNames, "LevelOffHidden": "false", "SelectorStyle": "1"}
-
-        devID = str(aLight['DeviceID'])
-        self.ikeaIds.append(devID)
-        if "Members" not in aLight:
-            aLight["Members"] = {}
-
-        if devID in self.lights:
-            self.lights[devID]["Members"] = aLight["Members"]
-            self.lights[devID]["Type"]    = aLight["Type"]
-            if devID+":WB" in self.lights:
-                self.lights[devID+":WB"]["Members"] = aLight["Members"]
-                self.lights[devID+":WB"]["Type"]    = aLight["Type"]
-            if devID+":CWS" in self.lights:
-                self.lights[devID+":CWS"]["Members"] = aLight["Members"]
-                self.lights[devID+":CWS"]["Type"]    = aLight["Type"]
-        else:
-            if aLight["Type"] == "Outlet":
-                Domoticz.Device(Name=aLight['Name'], Unit=self.nextDomoticzUnit, Type=244,
-                                    Subtype=73, Switchtype=0, Image=1, DeviceID=devID).Create()
-                self.lights[devID] = {
-                        "DeviceID": aLight['DeviceID'], "Unit": self.nextDomoticzUnit, "Type": aLight["Type"]}
-                self.nextDomoticzUnit += 1
-
-            if aLight["Type"] == "Light" or aLight["Type"] == "Group":
-                deviceType = 244
-                subType = 73
-
-                if not "HasRGB" in aLight:
-                    aLight["HasRGB"] = "false"
-                if aLight["Type"] == "Group":
-                    aLight["HasRGB"] = self.atLeastOneRGBgroupMember(aLight)
-
-                if aLight['Dimmable']:
-                    switchType = 7
-                else:
-                    switchType = 0
-
-                # Basic device
-                Domoticz.Device(Name=aLight['Name'], Unit=self.nextDomoticzUnit,  Type=deviceType,
-                                    Subtype=subType, Switchtype=switchType, DeviceID=devID).Create()
-                self.lights[devID] = {
-                        "DeviceID": aLight['DeviceID'], "Unit": self.nextDomoticzUnit, "Type": aLight["Type"], "Members": aLight["Members"]}
-                self.nextDomoticzUnit += 1
-
-                if str(aLight["HasRGB"]).lower() == "true":
-                    Domoticz.Device(Name=aLight['Name'] + " - Color",  Unit=self.nextDomoticzUnit, TypeName="Selector Switch",
-                                        Switchtype=18, Options=colorOptions, DeviceID=devID+":CWS").Create()
-                    self.lights[devID +
-                                    ":CWS"] = {"DeviceID": devID+":CWS", "Unit": self.nextDomoticzUnit, "Type": aLight["Type"], "Members": aLight["Members"]}
-                    self.nextDomoticzUnit += 1
-
-                if str(aLight['HasWB']).lower() == "true":
-                    Domoticz.Device(Name=aLight['Name'] + " - WB",  Unit=self.nextDomoticzUnit, TypeName="Selector Switch",
-                                        Switchtype=18, Options=WhiteOptions, DeviceID=devID+":WB").Create()
-                    self.lights[devID +
-                                    ":WB"] = {"DeviceID": devID+":WB", "Unit": self.nextDomoticzUnit, "Type": aLight["Type"], "Members": aLight["Members"]}
-                    self.nextDomoticzUnit += 1
-
     def registerDevices(self, ikeaDevices):
-        self.nextDomoticzUnit = 1
-        if (len(Devices) > 0):
-            self.nextDomoticzUnit = max(Devices)+1
+        i = 1
+        if len(Devices) == 0:
+            i = 1
+        else:
+            i = max(Devices) + 1
 
-        self.ikeaIds = []
+        whiteLevelNames, whiteLevelActions = colors.color_level_definitions(
+            colorspace="WS"
+        )
+        WhiteOptions = {
+            "LevelActions": whiteLevelActions,
+            "LevelNames": whiteLevelNames,
+            "LevelOffHidden": "true",
+            "SelectorStyle": "1",
+        }
+
+        colorLevelNames, colorLevelActions = colors.color_level_definitions(
+            colorspace="CWS"
+        )
+        colorOptions = {
+            "LevelActions": colorLevelActions,
+            "LevelNames": colorLevelNames,
+            "LevelOffHidden": "true",
+            "SelectorStyle": "1",
+        }
+
+        ikeaIds = []
         # Add unregistred lights
         for aLight in ikeaDevices:
-            if aLight["Type"] != "Group":
-                self.registerDevice(aLight)
-        # Then add unregistered groups
-        for aLight in ikeaDevices:
-            if aLight["Type"] == "Group":
-                self.registerDevice(aLight)
+            devID = str(aLight["DeviceID"])
+            ikeaIds.append(devID)
+
+            if not devID in self.lights:
+                Domoticz.Debug(
+                    "Registering: {0} - {1}".format(aLight["DeviceID"], aLight["Name"])
+                )
+                if aLight["Type"] == "Outlet":
+                    Domoticz.Device(
+                        Name=aLight["Name"],
+                        Unit=i,
+                        Type=244,
+                        Subtype=73,
+                        Switchtype=0,
+                        Image=1,
+                        DeviceID=devID,
+                    ).Create()
+                    self.lights[devID] = {"DeviceID": aLight["DeviceID"], "Unit": i}
+                    i = i + 1
+
+                if aLight["Type"] == "Remote":
+                    Domoticz.Device(
+                        Name=aLight["Name"] + " - Battery level",
+                        Unit=i,
+                        Type=243,
+                        Subtype=6,
+                        DeviceID=devID,
+                    ).Create()
+                    self.lights[devID] = {"DeviceID": aLight["DeviceID"], "Unit": i}
+                    i = i + 1
+
+                if aLight["Type"] == "Light" or aLight["Type"] == "Group":
+                    deviceType = 244
+                    subType = 73
+
+                    if not "HasRGB" in aLight:
+                        aLight["HasRGB"] = "false"
+
+                    if aLight["Dimmable"]:
+                        switchType = 7
+                    else:
+                        switchType = 0
+
+                    # Basic device
+                    Domoticz.Device(
+                        Name=aLight["Name"],
+                        Unit=i,
+                        Type=deviceType,
+                        Subtype=subType,
+                        Switchtype=switchType,
+                        DeviceID=devID,
+                    ).Create()
+                    self.lights[devID] = {"DeviceID": aLight["DeviceID"], "Unit": i}
+                    i = i + 1
+
+                    if aLight["Colorspace"] == "W":
+                        continue
+
+            if str(aLight["Colorspace"]) == "CWS" and devID + ":CWS" not in self.lights:
+                Domoticz.Debug("Registering: {0}:CWS".format(aLight["DeviceID"]))
+                Domoticz.Device(
+                    Name=aLight["Name"] + " - Color",
+                    Unit=i,
+                    TypeName="Selector Switch",
+                    Switchtype=18,
+                    Options=colorOptions,
+                    DeviceID=devID + ":CWS",
+                ).Create()
+                self.lights[devID + ":CWS"] = {"DeviceID": devID + ":CWS", "Unit": i}
+                i = i + 1
+
+            if aLight["Colorspace"] == "WS" and devID + ":WS" not in self.lights:
+                Domoticz.Debug("Registering: {0}:WS".format(aLight["DeviceID"]))
+                Domoticz.Device(
+                    Name=aLight["Name"] + " - Color",
+                    Unit=i,
+                    TypeName="Selector Switch",
+                    Switchtype=18,
+                    Options=WhiteOptions,
+                    DeviceID=devID + ":WS",
+                ).Create()
+                self.lights[devID + ":WS"] = {"DeviceID": devID + ":WS", "Unit": i}
+                i = i + 1
 
         # Remove registered lights no longer found on the gateway
         for aUnit in list(Devices.keys()):
             devID = str(Devices[aUnit].DeviceID)
 
-            if devID[-3:] == ":WB":
+            if devID[-3:] == ":WS":
                 devID = devID[:-3]
 
             if devID[-4:] == ":CWS":
                 devID = devID[:-4]
 
-            if not devID in self.ikeaIds:
+            if devID[-4:] == ":RGB":
+                devID = devID[:-4]
+
+            if not devID in ikeaIds:
                 Devices[aUnit].Delete()
 
-    def updateGroup(self,dev):
-        for devID in self.ikeaIds:
-            light = self.lights[devID]
-            if light["Type"] == "Group":
-                if dev["DeviceID"] in light["Members"]:
-                    targetDevice = Devices[light["Unit"]]
-                    nVal = 0
-                    sVal = "0"
-                    if str(dev["State"]).lower() == "true":
-                        nVal = 1
-                        sVal = "1"
-                    if str(dev["State"]).lower() == "false":
-                        nVal = 0
-                        sVal = "0"
-                    if "Level" in dev:
-                        sValInt = int((dev["Level"]/250)*100)
-                        if sValInt == 0:
-                            sValInt = 1
-                        sVal = str(sValInt)
-                    targetDevice.Update(nValue=nVal, sValue=sVal)
-                    if "Hex" in dev:
-                        if dev["Hex"] != None and dev["Hex"] != "000000":
-                            if devID+":WB" in self.lights:
-                                wbdevID = devID+":WB"
-                                targetUnit = self.lights[wbdevID]['Unit']
-                                if Devices[targetUnit].nValue != 210:
-                                    Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                                        colors.wbLevelForHex(dev['Hex'])))
-                            if devID+":CWS" in self.lights:
-                                wbdevID = devID+":CWS"
-                                targetUnit = self.lights[wbdevID]['Unit']
-                                if Devices[targetUnit].nValue != 210:
-                                    Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                                        colors.colorLevelForHex(dev['Hex'])))
+        # Set states
+        self.updateDeviceState(ikeaDevices)
 
     def updateDeviceState(self, deviceState):
         Domoticz.Debug("updateDeviceState "+str(deviceState))
         for aDev in deviceState:
-            Domoticz.Debug(str(aDev))
+
+            if aDev["Type"] == "Battery_Level":
+                continue
+
+            if aDev["Type"] == "Remote":
+                continue
+
             devID = str(aDev["DeviceID"])
-            if self.lights[devID]['Type'] != "Group":
-                self.updateGroup(aDev)
-            targetUnit = self.lights[devID]['Unit']
+            targetUnit = self.lights[devID]["Unit"]
             nVal = 0
             sVal = "0"
 
             if str(aDev["State"]).lower() == "true":
                 nVal = 1
-                sVal = "1"
             if str(aDev["State"]).lower() == "false":
                 nVal = 0
-                sVal = "0"
 
-            if "Level" in aDev:
-                sValInt = int((aDev["Level"]/250)*100)
-                if sValInt == 0:
-                    sValInt = 1
-
+            if aDev["Type"] == "Light":
+                Domoticz.Debug("Level: {0}".format(aDev["Level"]))
+                sValInt = int((aDev["Level"] / 250) * 100)
                 sVal = str(sValInt)
+            elif aDev["Type"] == "Group":
+                Domoticz.Debug("Level: {0}".format(aDev["Level"]))
+                sValInt = int((aDev["Level"] / 250) * 100)
+                sVal = str(sValInt)
+            else:
+                sVal = str(nVal)
 
             Devices[targetUnit].Update(nValue=nVal, sValue=sVal)
 
             if "Hex" in aDev:
-                if aDev["Hex"] != None and aDev["Hex"] != "000000":
-                    if devID+":WB" in self.lights:
-                        wbdevID = devID+":WB"
-                        targetUnit = self.lights[wbdevID]['Unit']
-                        if Devices[targetUnit].nValue != 210:
-                            Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                                colors.wbLevelForHex(aDev['Hex'])))
+                if aDev["Hex"] != None:
+                    if devID + ":WS" in self.lights:
+                        wbdevID = devID + ":WS"
+                        targetUnit = self.lights[wbdevID]["Unit"]
+                        Devices[targetUnit].Update(
+                            nValue=nVal,
+                            sValue=str(
+                                colors.color_level_for_hex(aDev["Hex"], colorspace="WS")
+                            ),
+                        )
 
-                    if devID+":CWS" in self.lights:
-                        wbdevID = devID+":CWS"
-                        targetUnit = self.lights[wbdevID]['Unit']
-                        if Devices[targetUnit].nValue != 210:
-                            Devices[targetUnit].Update(nValue=nVal, sValue=str(
-                                colors.colorLevelForHex(aDev['Hex'])))
+                    if devID + ":CWS" in self.lights:
+                        wbdevID = devID + ":CWS"
+                        targetUnit = self.lights[wbdevID]["Unit"]
+                        Devices[targetUnit].Update(
+                            nValue=nVal,
+                            sValue=str(
+                                colors.color_level_for_hex(
+                                    aDev["Hex"], colorspace="CWS"
+                                )
+                            ),
+                        )
+
+    def updateBatteryStatus(self, batteryStatus):
+        for aDev in batteryStatus:
+            devID = str(aDev["DeviceID"])
+            targetUnit = self.lights[devID]["Unit"]
+
+            Domoticz.Debug(
+                "Battery: {0} - Unit: {1} -Level: {2}".format(
+                    devID, targetUnit, aDev["Level"]
+                )
+            )
+            Devices[targetUnit].Update(
+                nValue=int(aDev["Level"]), sValue=str(aDev["Level"])
+            )
+
+    def sendMessage(self, connection, messageobj):
+        # connection.Send(Message="{0}\n".format(json.dumps(messageobj).encode(encoding='utf_8')))
+        connection.Send(Message="{0}\n".format(json.dumps(messageobj), Delay=1))
 
     def connectToAdaptor(self):
         self.CoapAdapter = Domoticz.Connection(
-            Name="Main", Transport="TCP/IP", Protocol="JSON", Address=Parameters["Address"], Port="1234")
+            Name="Main",
+            Transport="TCP/IP",
+            Protocol="JSON",
+            Address=Parameters["Address"],
+            Port="1234",
+        )
         self.CoapAdapter.Connect()
 
     def onStart(self):
@@ -268,31 +301,44 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(5)
-        self.pollInterval = int(Parameters['Mode4'])
+        Domoticz.Heartbeat(2)
+        self.pollInterval = int(Parameters["Mode4"])
 
         if len(Devices) > 0:
             # Some devices are already defined
             for aUnit in Devices:
                 self.lights[Devices[aUnit].DeviceID] = {
-                    "DeviceID": Devices[aUnit].DeviceID, "Unit": aUnit}
+                    "DeviceID": Devices[aUnit].DeviceID,
+                    "Unit": aUnit,
+                }
 
         self.connectToAdaptor()
 
     def onStop(self):
-        #Domoticz.Log("onStop called")
+        # Domoticz.Log("onStop called")
         return True
 
     def onConnect(self, Connection, Status, Description):
-        #Domoticz.Log("onConnect called")
+        # Domoticz.Log("onConnect called")
 
-        if (Status == 0):
-            Domoticz.Log("Connected successfully to: "+Parameters["Address"])
-            Connection.Send(Message=json.dumps({"action": "initGateway", "observe": Parameters["Mode2"], "pollinterval": Parameters[
-                            'Mode4'], "groups": Parameters["Mode3"], "transitiontime": Parameters["Mode5"]}).encode(encoding='utf_8'), Delay=1)
+        if Status == 0:
+            Domoticz.Log("Connected successfully to: " + Parameters["Address"])
+            self.sendMessage(
+                Connection,
+                {
+                    "action": "initGateway",
+                    "observe": Parameters["Mode2"],
+                    "pollinterval": Parameters["Mode4"],
+                    "groups": Parameters["Mode3"],
+                    "battery_levels": Parameters["Mode1"],
+                },
+            )
         else:
             Domoticz.Log(
-                "Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(Status, Description))
+                "Failed to connect to IKEA tradfri COAP-adapter! Status: {0} Description: {1}".format(
+                    Status, Description
+                )
+            )
         return True
 
     def onMessage(self, Connection, Data):
@@ -304,71 +350,156 @@ class BasePlugin:
             # Beta APi
             command = Data
 
-        if command['status'] == "Ok":
-            action = command['action']
+        if command["status"] == "Ok":
+            action = command["action"]
 
             if action == "initGateway":
                 # Config set
-                Connection.Send(Message=json.dumps(
-                    {"action": "getLights"}).encode(encoding='utf_8'), Delay=1)
+                self.sendMessage(
+                    Connection,
+                    {
+                        "action": "getDevices",
+                        "groups": Parameters["Mode3"],
+                        "battery_levels": Parameters["Mode1"],
+                    },
+                )
 
-            if action == "getLights":
-                self.registerDevices(command['result'])
+            if action == "getDevices":
+                self.registerDevices(command["result"])
 
-            if action == "deviceUpdate":
-                self.updateDeviceState(command['result'])
+            if action == "getChanges":
+                self.updateDeviceState(command["result"])
 
-        if command['status'] == "Failed":
-            Domoticz.Log("Command {0} failed with error: {1}.".format(
-                command['action'], command['error']))
+            if action == "setState" or action == "setLevel" or action == "setHex":
+                self.updateDeviceState(command["result"])
+
+            if action == "batteryStatus":
+                self.updateBatteryStatus(command["result"])
+
+        if command["status"] == "Error":
+            Domoticz.Log(
+                "Command {0} failed with error: {1}.".format(
+                    command["action"], command["result"]
+                )
+            )
             Domoticz.Log(str(command))
 
-    def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Debug("Command: " + str(Command)+" Level: "+str(Level)+" Type: "+str(
-            Devices[Unit].Type)+" SubType: "+str(Devices[Unit].SubType)+" Hue: "+str(Hue))
+    def onCommand(self, Unit, Command, Level, Color):
+        Domoticz.Debug(
+            "Command: "
+            + str(Command)
+            + " Level: "
+            + str(Level)
+            + " Type: "
+            + str(Devices[Unit].Type)
+            + " SubType: "
+            + str(Devices[Unit].SubType)
+            + " Color: {0}".format(Color)
+        )
 
-        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 73):
-            if Command == "On":
-                self.CoapAdapter.Send(Message=json.dumps(
-                    {"action": "setState", "state": "On", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
+        devId = Devices[Unit].DeviceID.split(":")
 
-            if Command == "Off":
-                self.CoapAdapter.Send(Message=json.dumps(
-                    {"action": "setState", "state": "Off", "deviceID": Devices[Unit].DeviceID}).encode(encoding='utf_8'))
+        if Command == "On":
+            self.sendMessage(
+                self.CoapAdapter,
+                {
+                    "action": "setState",
+                    "state": "On",
+                    "deviceID": devId[0],
+                    "transition_time": Parameters["Mode5"],
+                },
+            )
 
-            if Command == "Set Level":
-                targetLevel = int(int(Level)*250/100)
-                self.CoapAdapter.Send(Message=json.dumps(
-                    {"action": "setLevel", "deviceID": Devices[Unit].DeviceID, "level": targetLevel}).encode(encoding='utf_8'))
+        if Command == "Off":
+            self.sendMessage(
+                self.CoapAdapter,
+                {
+                    "action": "setState",
+                    "state": "Off",
+                    "deviceID": devId[0],
+                    "transition_time": Parameters["Mode5"],
+                },
+            )
 
-        if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
-            # This is a WB-device
-            hex = None
+        if Command == "Set Color":
+            self.sendMessage(
+                self.CoapAdapter,
+                {
+                    "action": "setColor",
+                    "level": int(int(Level) * 250 / 100),
+                    "color": json.loads(Color),
+                    "deviceID": devId[0],
+                    "transition_time": Parameters["Mode5"],
+                },
+            )
 
-            # [0] is the DeviceID [1] is the subType (WB/CWS)
-            devId = Devices[Unit].DeviceID.split(':')
+        if Command == "Set Level":
+            if (Devices[Unit].Type == 244) and (Devices[Unit].SubType == 62):
+                # This is a WB-device
+                hex = None
 
-            if Level == 0:
-                # Off
-                self.CoapAdapter.Send(Message=json.dumps(
-                    {"action": "setState", "state": "Off", "deviceID": devId[0]}).encode(encoding='utf_8'))
+                if Level == 0:
+                    # Off
+                    self.sendMessage(
+                        self.CoapAdapter,
+                        {
+                            "action": "setState",
+                            "state": "Off",
+                            "deviceID": devId[0],
+                            "transition_time": Parameters["Mode5"],
+                        },
+                    )
 
+                else:
+                    if devId[1] == "WS":
+                        self.sendMessage(
+                            self.CoapAdapter,
+                            {
+                                "action": "setHex",
+                                "deviceID": devId[0],
+                                "hex": colors.color(Level, colorspace="WS")["Hex"],
+                                "transition_time": Parameters["Mode5"],
+                            },
+                        )
+                    if devId[1] == "CWS":
+                        self.sendMessage(
+                            self.CoapAdapter,
+                            {
+                                "action": "setHex",
+                                "deviceID": devId[0],
+                                "hex": colors.color(Level, colorspace="CWS")["Hex"],
+                                "transition_time": Parameters["Mode5"],
+                            },
+                        )
             else:
-                if devId[1] == "WB":
-                    self.CoapAdapter.Send(Message=json.dumps(
-                        {"action": "setHex", "deviceID": devId[0], "hex": colors.wb(Level)["Hex"]}).encode(encoding='utf_8'))
-                if devId[1] == "CWS":
-                    if Level != 210:
-                        Devices[Unit].Update(nValue=0, sValue="Off")
-                        self.CoapAdapter.Send(Message=json.dumps(
-                                  {"action": "setHex", "deviceID": devId[0], "hex": colors.color(Level)["Hex"]}).encode(encoding='utf_8'))
-                    else:
-                        # Enter Psychedelic mode
-                        Devices[Unit].Update(nValue=210, sValue=str(colors.colorLevelForHex("ffffff")))
+                targetLevel = int(int(Level) * 250 / 100)
+                self.sendMessage(
+                    self.CoapAdapter,
+                    {
+                        "action": "setLevel",
+                        "deviceID": devId[0],
+                        "level": targetLevel,
+                        "transition_time": Parameters["Mode5"],
+                    },
+                )
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
-        Domoticz.Log("Notification: " + Name + "," + Subject + "," + Text +
-                     "," + Status + "," + str(Priority) + "," + Sound + "," + ImageFile)
+        Domoticz.Log(
+            "Notification: "
+            + Name
+            + ","
+            + Subject
+            + ","
+            + Text
+            + ","
+            + Status
+            + ","
+            + str(Priority)
+            + ","
+            + Sound
+            + ","
+            + ImageFile
+        )
 
     def onDisconnect(self, Connection):
         self.isConnected = False
@@ -376,16 +507,28 @@ class BasePlugin:
         return
 
     def onHeartbeat(self):
-        if (self.CoapAdapter.Connected() == True):
+        if self.CoapAdapter.Connected() == True:
             if Parameters["Mode2"] == "True":
-                interval = (datetime.datetime.now()-self.lastPollTime).seconds
-                if interval+1 > self.pollInterval:
+                interval = (datetime.datetime.now() - self.lastPollTime).seconds
+                if interval + 1 > self.pollInterval:
                     self.lastPollTime = datetime.datetime.now()
-                    self.CoapAdapter.Send(Message=json.dumps(
-                        {"action": "announceChanged"}).encode(encoding='utf_8'))
+                    self.sendMessage(
+                        self.CoapAdapter,
+                        {
+                            "action": "getChanges",
+                            "groups": Parameters["Mode3"],
+                            "battery_levels": Parameters["Mode1"],
+                        },
+                    )
+
+            if Parameters["Mode1"] == "True":
+                # Poll batteries
+                interval = (datetime.datetime.now() - self.lastBattryPollTime).seconds
+                if interval + 1 > self.batteryPollInterval:
+                    self.lastBattryPollTime = datetime.datetime.now()
+                    self.sendMessage(self.CoapAdapter, {"action": "battery_status"})
         else:
-            Domoticz.Debug(
-                "Not connected - nextConnect: {0}".format(self.nextConnect))
+            Domoticz.Debug("Not connected - nextConnect: {0}".format(self.nextConnect))
             self.nextConnect = self.nextConnect - 1
             if self.nextConnect <= 0:
                 self.nextConnect = 3
@@ -433,8 +576,7 @@ def onCommand(Unit, Command, Level, Hue):
 
 def onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile):
     global _plugin
-    _plugin.onNotification(Name, Subject, Text, Status,
-                           Priority, Sound, ImageFile)
+    _plugin.onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile)
 
 
 def onDisconnect(Connection):

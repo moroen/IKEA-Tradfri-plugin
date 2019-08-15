@@ -1,9 +1,0 @@
-version: "2"
-
-services:
-  tradfri:
-    build: .
-    volumes:
-      - .:/usr/src/app
-    ports:
-      - "1234:1234"
