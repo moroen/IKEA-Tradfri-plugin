@@ -122,7 +122,18 @@ NOTE: This is NOT the IP of the IKEA-Tradfri gateway. When running domoticz and 
 To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 5, and the intervall should be a multiple of 5 seconds. Using a too short interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
 
 ### Upgrading from previous version of the plugin and adapter
-After upgrading to the lastest version, make sure to configure the adapter as described above.
+To upgrade from the previous version, first stop domoticz and the adapter:
+```shell
+$ sudo systemctl stop domoticz.service
+$ sudo systemctl stop ikea-tradfri.service
+```
+
+Then pull the latest master branch from git:
+```shell
+$ cd domoticz/plugins/IKEA-Tradfri
+$ git pull
+```
+And follow the instructions above from step 2.
 
 Then restart domoticz and on the hardware-page, select the IKEA-Plugin, change the IP from the previous address (IKEA-Gateway) to the host running the adapter, and press "Update".
 
