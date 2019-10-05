@@ -29,6 +29,7 @@ hex_whites = {
     30: {"Name": "Warm", "Hex": "efd275"},
 }
 
+
 def list_hexes(colorspace, levels=False):
     retVal = ""
     target = ""
@@ -42,19 +43,22 @@ def list_hexes(colorspace, levels=False):
 
     return retVal[:-1]
 
+
 def color(level, colorspace="WS"):
     return hex_colors[int(level)] if colorspace == "CWS" else hex_whites[int(level)]
-    
+
+
 def color_level_definitions(colorspace):
-    levels=""
-    actions=""
+    levels = ""
+    actions = ""
     target = hex_colors if colorspace == "CWS" else hex_whites
 
     for _, aColor in sorted(target.items()):
-        levels="{0}{1}|".format(levels, aColor["Name"])
-        actions="{0}{1}|".format(actions, "")
+        levels = "{0}{1}|".format(levels, aColor["Name"])
+        actions = "{0}{1}|".format(actions, "")
 
     return levels[:-1], actions[:-1]
+
 
 def color_level_for_hex(hex, colorspace):
     target = hex_colors if colorspace == "CWS" else hex_whites
@@ -63,10 +67,8 @@ def color_level_for_hex(hex, colorspace):
         if target[key]["Hex"] == hex:
             return key
 
+
 def color_name_for_hex(hex, colorspace):
     target = hex_colors if colorspace == "CWS" else hex_whites
-    
-    
+
     return target[color_level_for_hex(hex, colorspace)]["Name"]
-
-
