@@ -3,6 +3,7 @@ import json
 import logging
 import socket
 import threading
+import sys
 
 from aiocoap import Message, Context
 from aiocoap.error import RequestTimedOut, Error, ConstructionRenderableError
@@ -10,6 +11,7 @@ from aiocoap.numbers.codes import Code
 from aiocoap.transports import tinydtls
 
 from config import get_config
+
 
 
 class PatchedDTLSSecurityStore:
@@ -23,10 +25,12 @@ class PatchedDTLSSecurityStore:
         return PatchedDTLSSecurityStore.IDENTITY, PatchedDTLSSecurityStore.KEY
 
 
-tinydtls.DTLSSecurityStore = PatchedDTLSSecurityStore
-
+def init():
+    tinydtls.DTLSSecurityStore = PatchedDTLSSecurityStore
 
 async def _get_request(uri):
+
+    print (sys.path)
 
     protocol = await Context.create_client_context()
 
@@ -58,6 +62,7 @@ def DTLSRequest(uri, ident, key):
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(_get_request(uri))
+    print ("Id: {} Key: {}".format(PatchedDTLSSecurityStore.IDENTITY, PatchedDTLSSecurityStore.KEY))
     return loop.run_until_complete(task)
 
 
@@ -73,8 +78,8 @@ def DTLSPutRequest(uri, payload, ident, key):
 def request(uri, payload=None):
     conf = get_config()
 
-    print(uri)
-    print (payload)
+    print ("Uri: {}".format(uri))
+    print ("Payload: {}".format(payload))
 
     if payload == None:
         return DTLSRequest(
@@ -90,6 +95,16 @@ def request(uri, payload=None):
             conf["Passkey"],
         )
 
+async def stop_loop():
+    loop = asyncio.get_event_loop()
+    await loop.stop()
+
+def close_loop():
+    loop = asyncio.get_event_loop()
+    loop.stop()
+
+    # pending = asyncio.Task.all_tasks()
+    # loop.run_until_complete(asyncio.gather(*pending))
 
 if __name__ == "__main__":
     pass

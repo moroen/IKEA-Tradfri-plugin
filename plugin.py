@@ -59,98 +59,64 @@ class BasePlugin:
         if len(Devices) > 0:
             # Some devices are already defined
             for aUnit in Devices:
-                Domoticz.Log("Getting info for id: {}".format(Devices[aUnit].DeviceID))
                 dev_id = Devices[aUnit].DeviceID.split(":")
-                              
                 self.lights[aUnit] = tradfricoap.get_device(dev_id[0])
-                Domoticz.Log(self.lights[aUnit].Description)
-        
-        return
 
-        i = 1
-        if len(Devices) == 0:
-            i = 1
-        else:
-            i = max(Devices) + 1
-
-        whiteLevelNames, whiteLevelActions = colors.color_level_definitions(
-            colorspace="WS"
-        )
-        WhiteOptions = {
-            "LevelActions": whiteLevelActions,
-            "LevelNames": whiteLevelNames,
-            "LevelOffHidden": "true",
-            "SelectorStyle": "1",
-        }
-
-        colorLevelNames, colorLevelActions = colors.color_level_definitions(
-            colorspace="CWS"
-        )
-        colorOptions = {
-            "LevelActions": colorLevelActions,
-            "LevelNames": colorLevelNames,
-            "LevelOffHidden": "true",
-            "SelectorStyle": "1",
-        }
-
+        unitIds = [dev.DeviceID for key, dev in Devices.items()]
         ikeaIds = []
+
         # Add unregistred lights
-        for aLight in tradfricoap.get_devices():
+        tradfriDevices = tradfricoap.get_devices()
+
+        if tradfriDevices == None:
+            Domoticz.Log ("Failed to get Tradfri-devices")
+            return
+        
+        for aLight in tradfriDevices:
             devID = str(aLight.DeviceID)
             ikeaIds.append(devID)
 
-            if not devID in self.lights:
-                Domoticz.Debug(
-                    "Registering: {0} - {1}".format(aLight.DeviceID, aLight.Name)
-                )
+            if not devID in unitIds:
+                Domoticz.Debug("Processing: {0}".format(aLight.Description))
                 if aLight.Type == "Plug":
                     Domoticz.Device(
                         Name=aLight.Name,
-                        Unit=i,
+                        Unit=firstFree(),
                         Type=244,
                         Subtype=73,
                         Switchtype=0,
                         Image=1,
                         DeviceID=devID,
                     ).Create()
-                    self.lights[devID] = {"DeviceID": aLight.DeviceID, "Unit": i}
-                    i = i + 1
 
                 if aLight.Type == "Remote":
                     Domoticz.Device(
                         Name=aLight.Name + " - Battery level",
-                        Unit=i,
+                        Unit=firstFree(),
                         Type=243,
                         Subtype=6,
                         DeviceID=devID,
                     ).Create()
-                    self.lights[devID] = {"DeviceID": aLight.DeviceID, "Unit": i}
-                    i = i + 1
 
                 if aLight.Type == "Light" or aLight.Type == "Group":
                     deviceType = 244
                     subType = 73
                     switchType = 7
 
-                    # if aLight["Dimmable"]:
-                    #    switchType = 7
-                    # else:
-                    #    switchType = 0
-
                     # Basic device
                     Domoticz.Device(
                         Name=aLight.Name,
-                        Unit=i,
+                        Unit=firstFree(),
                         Type=deviceType,
                         Subtype=subType,
                         Switchtype=switchType,
                         DeviceID=devID,
                     ).Create()
-                    self.lights[devID] = {"DeviceID": aLight.DeviceID, "Unit": i}
-                    i = i + 1
 
                     if aLight.ColorSpace == "W":
                         continue
+
+            continue
 
             if str(aLight.ColorSpace) == "CWS" and devID + ":CWS" not in self.lights:
                 Domoticz.Debug("Registering: {0}:CWS".format(aLight.DeviceID))
@@ -193,6 +159,7 @@ class BasePlugin:
             # Domoticz.Log(str(self.lights[id]))
 
         # Remove registered lights no longer found on the gateway
+
         for aUnit in list(Devices.keys()):
             devID = str(Devices[aUnit].DeviceID)
 
@@ -212,11 +179,14 @@ class BasePlugin:
         Domoticz.Log("onStart called")
 
         Domoticz.Debugging(1)
-
+        tradfricoap.initDTLS()
+        tradfricoap.set_transition_time(Parameters["Mode4"])
         self.registerDevices()
 
     def onStop(self):
         Domoticz.Log("Stopping IKEA Tradfri plugin")
+
+        tradfricoap.perform_shutdown()
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -250,15 +220,15 @@ class BasePlugin:
         )
 
         if Command == "On":
-            self.lights[Unit].State=1
+            self.lights[Unit].State = 1
             Devices[Unit].Update(nValue=1, sValue="1")
 
         if Command == "Off":
-            self.lights[Unit].State=0
+            self.lights[Unit].State = 0
             Devices[Unit].Update(nValue=0, sValue="0")
 
         if Command == "Set Level":
-            self.lights[Unit].Level = int(Level*2.54)
+            self.lights[Unit].Level = int(Level * 2.54)
             Devices[Unit].Update(nValue=1, sValue=str(Level))
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
@@ -346,8 +316,9 @@ def DumpConfigToLog():
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
 
+
 def firstFree():
-    for num in range(1,250):
+    for num in range(1, 250):
         if num not in Devices:
             return num
     return

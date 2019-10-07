@@ -1,47 +1,27 @@
+# Standard library
+import json, logging, time, sys, site
+
+
+
+# Module
 from config import get_config
-
-import json
-
-import logging
-import time
-import sys
-
 import constants
-
-from pycoap_asyncio import request
-
-logger = logging.getLogger(__name__)
-
-import site
+from pycoap_asyncio import request, close_loop, init
 
 site.main()
 
-import pycoap_asyncio as pycoap
+# logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+_transition_time = 10
+
+def initDTLS():
+    init()
 
 
-def state(id, state):
-    conf = get_config()
-
-    dev = device(id)
-    dev.State = state
-
-
-def level(id, level, transition_time=10):
-    conf = get_config()
-
-    uri = "{}/{}".format(constants.uriDevices, id)
-    payload = '{{ "{0}": [{{ "{1}": {2}, "{3}": {4} }}] }}'.format(
-        constants.attrLightControl,
-        constants.attrLightDimmer,
-        level,
-        constants.attrTransitionTime,
-        transition_time,
-    )
-
-    logger.info("Setting level for uri: {} using payload: {}".format(uri, payload))
-
-    request(uri, payload)
-
+def set_transition_time(tt):
+    global _transition_time
+    _transition_time = int(tt)
 
 class device:
     lightControl = None
@@ -52,8 +32,11 @@ class device:
         self._id = id
         uri = "{}/{}".format(constants.uriDevices, id)
         res = request(uri)
-        self.device = json.loads(res)
-        self.device_info = self.device[constants.attrDeviceInfo]
+        try:
+            self.device = json.loads(res)
+            self.device_info = self.device[constants.attrDeviceInfo]
+        except TypeError:
+            return
 
         try:
             self.lightControl = self.device[constants.attrLightControl][0]
@@ -111,14 +94,12 @@ class device:
     def Level(self, level):
         uri = "{}/{}".format(constants.uriDevices, self._id)
         payload = '{{ "{0}": [{{ "{1}": {2}, "{3}": {4} }}] }}'.format(
-        constants.attrLightControl,
-        constants.attrLightDimmer,
-        level,
-        constants.attrTransitionTime,
-        10)
-
-        print (uri)
-        print (payload)
+            constants.attrLightControl,
+            constants.attrLightDimmer,
+            level,
+            constants.attrTransitionTime,
+            _transition_time,
+        )
 
         request(uri, payload)
 
@@ -135,9 +116,6 @@ class device:
         return "W"
 
 
-
-    
-
 def get_device(id):
     dev = device(id)
     return dev
@@ -145,7 +123,10 @@ def get_device(id):
 
 def get_devices():
     uri = constants.uriDevices
-    res = json.loads(request(uri))
+    try:
+        res = json.loads(request(uri))
+    except TypeError:
+        return
 
     devices = []
 
@@ -154,11 +135,14 @@ def get_devices():
 
     return devices
 
+def perform_shutdown():
+    close_loop()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    dev = get_device(65554)
-    print (dev.Description)
-    dev.Level=10
+    # dev = get_device(65554)
+    # print (dev.Description)
+    # dev.Level=10
 
-    level(65554, 100, 10)
+    # level(65554, 100, 10)
+    get_devices()

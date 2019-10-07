@@ -72,3 +72,21 @@ def color_name_for_hex(hex, colorspace):
     target = hex_colors if colorspace == "CWS" else hex_whites
 
     return target[color_level_for_hex(hex, colorspace)]["Name"]
+
+
+whiteLevelNames, whiteLevelActions = color_level_definitions(colorspace="WS")
+
+WhiteOptions = {
+    "LevelActions": whiteLevelActions,
+    "LevelNames": whiteLevelNames,
+    "LevelOffHidden": "true",
+    "SelectorStyle": "1",
+}
+
+colorLevelNames, colorLevelActions = color_level_definitions(colorspace="CWS")
+colorOptions = {
+    "LevelActions": colorLevelActions,
+    "LevelNames": colorLevelNames,
+    "LevelOffHidden": "true",
+    "SelectorStyle": "1",
+}
