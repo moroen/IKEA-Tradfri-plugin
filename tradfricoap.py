@@ -1,27 +1,43 @@
 # Standard library
-import json, logging, time, sys, site
-
-
+import json, logging, time, sys, site, argparse
 
 # Module
-from config import get_config
+from config import get_config, host_config
 import constants
-from pycoap_asyncio import request, close_loop, init
+from gw import create_ident
 
 site.main()
+
+import pycoap
 
 # logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 _transition_time = 10
 
-def initDTLS():
-    init()
+
+def request(uri, payload=None):
+    conf = get_config()
+
+    if payload == None:
+        return pycoap.Request(
+            uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
+            ident=conf["Identity"],
+            key=conf["Passkey"],
+        )
+    else:
+        return pycoap.Request(
+            uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
+            payload=payload,
+            ident=conf["Identity"],
+            key=conf["Passkey"],
+        )
 
 
 def set_transition_time(tt):
     global _transition_time
     _transition_time = int(tt)
+
 
 class device:
     lightControl = None
@@ -45,6 +61,9 @@ class device:
                 self.plugControl = self.device[constants.attrPlugControl][0]
             except KeyError:
                 pass
+
+    def Update(self):
+        self.__init__(self._id)
 
     @property
     def Description(self):
@@ -87,6 +106,8 @@ class device:
     def Level(self):
         if self.lightControl:
             return self.lightControl[constants.attrLightDimmer]
+        else:
+            return self.State
 
         return None
 
@@ -135,14 +156,27 @@ def get_devices():
 
     return devices
 
-def perform_shutdown():
-    close_loop()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    # dev = get_device(65554)
-    # print (dev.Description)
-    # dev.Level=10
 
-    # level(65554, 100, 10)
-    get_devices()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command", nargs="?")
+    parser.add_argument("--ip")
+    parser.add_argument("--key")
+
+    args = parser.parse_args()
+
+    if args.command is not None:
+        if args.command == "test":
+           devices = get_devices()
+           for dev in devices:
+                print(dev.Description)
+                
+
+        elif args.command == "config":
+            if (args.ip is None) or (args.key is None):
+                print("Missing IP and/or KEY")
+                exit()
+            else:
+                create_ident(args.ip, args.key)
