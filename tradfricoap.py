@@ -29,6 +29,7 @@ def request(uri, payload=None):
         return pycoap.Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,
+            method=pycoap.PUT,
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
@@ -169,10 +170,12 @@ if __name__ == "__main__":
 
     if args.command is not None:
         if args.command == "test":
-           devices = get_devices()
-           for dev in devices:
+            devices = get_devices()
+            for dev in devices:
                 print(dev.Description)
-                
+
+            dev = get_device(65554)
+            dev.State = 1
 
         elif args.command == "config":
             if (args.ip is None) or (args.key is None):
