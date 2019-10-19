@@ -28,6 +28,7 @@ def request(uri, payload=None):
         return pycoap.Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,
+            method=pycoap.PUT,
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
