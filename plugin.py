@@ -1,9 +1,9 @@
-# Basic Python Plugin Example
+# IKEA Tradfri Plugin - Pycoap version
 #
-# Author: GizMoCuz
+# Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.1.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
         Overview...
@@ -38,12 +38,12 @@
 </plugin>
 """
 import Domoticz
-import site, sys, time, threading
+import site, sys, time, threading, json
 
 site.main()
 
 import tradfricoap
-from colors import WhiteOptions, colorOptions
+from tradfri.colors import WhiteOptions, colorOptions
 
 
 class BasePlugin:
@@ -85,9 +85,6 @@ class BasePlugin:
 
         unitIds = self.indexRegisteredDevices()
         ikeaIds = []
-
-        for key, aLight in self.lights.items():
-            print("Unit {}: {}".format(key, aLight.Description))
 
         # Add unregistred lights
         tradfriDevices = tradfricoap.get_devices()
@@ -143,7 +140,7 @@ class BasePlugin:
                     if aLight.ColorSpace == "W":
                         continue
 
-            if str(aLight.ColorSpace) == "CWS" and devID + ":CWS" not in self.lights:
+            if aLight.ColorSpace == "CWS" and devID + ":CWS" not in unitIds:
                 new_unit_id = firstFree()
                 Domoticz.Debug("Registering: {0}:CWS".format(aLight.DeviceID))
                 Domoticz.Device(
@@ -236,13 +233,13 @@ class BasePlugin:
             self.updateDevice(Unit)
 
         if Command == "Set Level":
-            if devID[-4:] == ":CWS":
+            if Devices[Unit].DeviceID[-4:] == ":CWS":
                 pass
-            elif devID[-3:] == ":WS":
+            if Devices[Unit].DeviceID[-3:] == ":WS":
                 pass
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
-
+            
             self.updateDevice(Unit)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):

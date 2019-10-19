@@ -2,9 +2,8 @@
 import json, logging, time, sys, site, argparse
 
 # Module
-from config import get_config, host_config
-import constants
-from gw import create_ident
+from tradfri.config import get_config, host_config
+import tradfri.constants as constants
 
 site.main()
 
@@ -169,14 +168,17 @@ if __name__ == "__main__":
 
     if args.command is not None:
         if args.command == "test":
-           devices = get_devices()
-           for dev in devices:
+            devices = get_devices()
+            for dev in devices:
                 print(dev.Description)
                 
+            dev = get_device(65554)
+            dev.State=1
 
         elif args.command == "config":
             if (args.ip is None) or (args.key is None):
                 print("Missing IP and/or KEY")
                 exit()
             else:
+                from tradfri.gw import create_ident
                 create_ident(args.ip, args.key)
