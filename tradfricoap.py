@@ -172,9 +172,6 @@ if __name__ == "__main__":
             devices = get_devices()
             for dev in devices:
                 print(dev.Description)
-                
-            dev = get_device(65554)
-            dev.State=1
 
         elif args.command == "config":
             if (args.ip is None) or (args.key is None):
