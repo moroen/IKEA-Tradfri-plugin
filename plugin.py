@@ -34,6 +34,12 @@
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
         <param field="Mode4" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
+        <param field="Mode6" label="Debug" width="75px">
+            <options>
+                <option label="True" value="Debug"/>
+                <option label="False" value="Normal"  default="true" />
+            </options>
+        </param>
     </params>
 </plugin>
 """
@@ -80,6 +86,10 @@ class BasePlugin:
             # Dimmer
             level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
             Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=level)
+
+
+        if Devices[Unit].DeviceID[-3:] == ":WS" or Devices[Unit].DeviceID[-4:] == ":CWS":
+            Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Color_level))
 
     def registerDevices(self):
 
@@ -184,14 +194,16 @@ class BasePlugin:
                 Devices[aUnit].Delete()
 
     def onStart(self):
-        Domoticz.Log("onStart called")
+        Domoticz.Debug("onStart called")
 
-        Domoticz.Debugging(1)
+        if Parameters["Mode6"] == "Debug":
+            Domoticz.Debugging(1)
+
         tradfricoap.set_transition_time(Parameters["Mode4"])
         self.registerDevices()
 
     def onStop(self):
-        Domoticz.Log("Stopping IKEA Tradfri plugin")
+        Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -199,7 +211,7 @@ class BasePlugin:
         while threading.active_count() > 1:
             for thread in threading.enumerate():
                 if thread.name != threading.current_thread().name:
-                    Domoticz.Log(
+                    Domoticz.Debug(
                         "'"
                         + thread.name
                         + "' is still running, waiting otherwise Domoticz will crash on plugin exit."
@@ -209,13 +221,13 @@ class BasePlugin:
         Domoticz.Debugging(0)
 
     def onConnect(self, Connection, Status, Description):
-        Domoticz.Log("onConnect called")
+        Domoticz.Debug("onConnect called")
 
     def onMessage(self, Connection, Data):
-        Domoticz.Log("onMessage called")
+        Domoticz.Debug("onMessage called")
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log(
+        Domoticz.Debug(
             "onCommand called for Unit "
             + str(Unit)
             + ": Parameter '"
@@ -234,16 +246,16 @@ class BasePlugin:
 
         if Command == "Set Level":
             if Devices[Unit].DeviceID[-4:] == ":CWS":
-                pass
+                self.lights[Unit].Color_level=Level
             if Devices[Unit].DeviceID[-3:] == ":WS":
-                pass
+                self.lights[Unit].Color_level=Level
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
             
             self.updateDevice(Unit)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
-        Domoticz.Log(
+        Domoticz.Debug(
             "Notification: "
             + Name
             + ","
@@ -261,10 +273,10 @@ class BasePlugin:
         )
 
     def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called")
+        Domoticz.Debug("onDisconnect called")
 
     def onHeartbeat(self):
-        Domoticz.Log("onHeartbeat called")
+        Domoticz.Debug("onHeartbeat called")
 
 
 global _plugin

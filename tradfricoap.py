@@ -3,7 +3,8 @@ import json, logging, time, sys, site, argparse
 
 # Module
 from tradfri.config import get_config, host_config
-import tradfri.constants as constants
+from tradfri import constants
+from tradfri import colors
 
 site.main()
 
@@ -67,7 +68,7 @@ class device:
 
     @property
     def Description(self):
-        return "{}: {}".format(self.DeviceID, self.Name)
+        return "{}: {} ({} - {})".format(self.DeviceID, self.Name, self.State, self.Hex)
 
     @property
     def DeviceID(self):
@@ -136,6 +137,37 @@ class device:
 
         return "W"
 
+    @property
+    def Hex(self):
+        if self.lightControl:
+            if constants.attrLightHex in self.lightControl:
+                return self.lightControl[constants.attrLightHex]
+        return None
+
+    @Hex.setter
+    def Hex(self, hex):
+        uri = "{}/{}".format(constants.uriDevices, self._id)
+        payload = '{{ "{0}": [{{ "{1}": "{2}", "{3}": {4} }}] }}'.format(
+            constants.attrLightControl,
+            constants.attrLightHex,
+            str(hex),
+            constants.attrTransitionTime,
+            _transition_time,
+        )
+        request(uri, payload)
+
+    @property
+    def Color_level(self):
+        hex = self.Hex
+        if hex is not None:
+            return colors.color_level_for_hex(hex, self.ColorSpace)
+        return None
+
+    @Color_level.setter
+    def Color_level(self, level):
+        color = colors.color(level, self.ColorSpace)
+        if color is not None:
+            self.Hex = color["Hex"]
 
 def get_device(id):
     dev = device(id)
@@ -172,7 +204,11 @@ if __name__ == "__main__":
             devices = get_devices()
             for dev in devices:
                 print(dev.Description)
-
+            
+            #dev = get_device(65550)
+            #dev.State = 1
+            #dev.Color_level= 30
+            
         elif args.command == "config":
             if (args.ip is None) or (args.key is None):
                 print("Missing IP and/or KEY")

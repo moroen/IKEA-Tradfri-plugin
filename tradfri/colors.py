@@ -45,7 +45,10 @@ def list_hexes(colorspace, levels=False):
 
 
 def color(level, colorspace="WS"):
-    return hex_colors[int(level)] if colorspace == "CWS" else hex_whites[int(level)]
+    try:
+        return hex_colors[int(level)] if colorspace == "CWS" else hex_whites[int(level)]
+    except KeyError:
+        return None
 
 
 def color_level_definitions(colorspace):
