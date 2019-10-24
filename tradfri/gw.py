@@ -1,6 +1,6 @@
 import pycoap
 
-from config import host_config
+from .config import host_config
 from json import loads, dumps
 
 
