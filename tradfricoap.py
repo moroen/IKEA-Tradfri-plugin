@@ -169,6 +169,7 @@ class device:
         if color is not None:
             self.Hex = color["Hex"]
 
+
 def get_device(id):
     dev = device(id)
     return dev
@@ -193,26 +194,23 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", nargs="?")
-    parser.add_argument("--ip")
-    parser.add_argument("--key")
+    subparsers = parser.add_subparsers(dest="command")
+
+    parser_config_gateway = subparsers.add_parser("list")
+
+    parser_config_gateway = subparsers.add_parser("config")
+    parser_config_gateway.add_argument("IP")
+    parser_config_gateway.add_argument("KEY")
 
     args = parser.parse_args()
 
     if args.command is not None:
-        if args.command == "test":
+        if args.command == "list":
             devices = get_devices()
             for dev in devices:
                 print(dev.Description)
-            
-            #dev = get_device(65550)
-            #dev.State = 1
-            #dev.Color_level= 30
-            
+
         elif args.command == "config":
-            if (args.ip is None) or (args.key is None):
-                print("Missing IP and/or KEY")
-                exit()
-            else:
-                from tradfri.gw import create_ident
-                create_ident(args.ip, args.key)
+            from tradfri.gw import create_ident
+
+            create_ident(args.IP, args.KEY)
