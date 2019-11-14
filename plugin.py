@@ -6,18 +6,6 @@
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.1.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
-        Overview...
-        <h3>Features</h3>
-        <ul style="list-style-type:square">
-            <li>Feature one...</li>
-            <li>Feature two...</li>
-        </ul>
-        <h3>Devices</h3>
-        <ul style="list-style-type:square">
-            <li>Device Type - What it does...</li>
-        </ul>
-        <h3>Configuration</h3>
-        Configuration options...
     </description>
     <params>
         <param field="Mode1" label="Add groups as devices" width="75px">
@@ -97,7 +85,10 @@ class BasePlugin:
         ikeaIds = []
 
         # Add unregistred lights
-        tradfriDevices = tradfricoap.get_devices()
+        if Parameters["Mode1"] == "True":
+            tradfriDevices = tradfricoap.get_devices(groups=True)
+        else:
+            tradfriDevices = tradfricoap.get_devices()
 
         if tradfriDevices == None:
             Domoticz.Log("Failed to get Tradfri-devices")
@@ -252,6 +243,11 @@ class BasePlugin:
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
             
+            if Level == 0:
+                self.lights[Unit].State = 0
+            else:
+                self.lights[Unit].State = 1
+
             self.updateDevice(Unit)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):

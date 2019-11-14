@@ -1,4 +1,5 @@
 uriDevices = "15001"
+uri_groups = "15004"
 
 
 # General

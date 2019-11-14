@@ -45,30 +45,45 @@ class device:
     plugControl = None
     _id = None
 
-    def __init__(self, id):
+    def __init__(self, id, is_group=False):
         self._id = id
-        uri = "{}/{}".format(constants.uriDevices, id)
-        res = request(uri)
-        try:
-            self.device = json.loads(res)
-            self.device_info = self.device[constants.attrDeviceInfo]
-        except TypeError:
-            return
-
-        try:
-            self.lightControl = self.device[constants.attrLightControl][0]
-        except KeyError:
+        self._is_group = is_group
+        
+        if not self._is_group:
+            uri = "{}/{}".format(constants.uriDevices, id)
+            res = request(uri)
             try:
-                self.plugControl = self.device[constants.attrPlugControl][0]
+                self.device = json.loads(res)
+                self.device_info = self.device[constants.attrDeviceInfo]
+            except TypeError:
+                return
+
+            try:
+                self.lightControl = self.device[constants.attrLightControl][0]
             except KeyError:
-                pass
+                try:
+                    self.plugControl = self.device[constants.attrPlugControl][0]
+                except KeyError:
+                    pass
+        else:
+            uri = "{}/{}".format(constants.uri_groups, id)
+            res = request(uri)
+            
+            try:
+                self.device = json.loads(res)
+            except TypeError:
+                return
+            
 
     def Update(self):
         self.__init__(self._id)
 
     @property
     def Description(self):
-        return "{}: {} ({} - {})".format(self.DeviceID, self.Name, self.State, self.Hex)
+        if not self._is_group:
+            return "{}: {} ({} - {})".format(self.DeviceID, self.Name, self.State, self.Hex)
+        else:
+            return "{}: {}".format(self.DeviceID, self.Name)
 
     @property
     def DeviceID(self):
@@ -175,38 +190,43 @@ def get_device(id):
     return dev
 
 
-def get_devices():
+def get_devices(groups=False):
+    devices = []
+
     uri = constants.uriDevices
     try:
         res = json.loads(request(uri))
     except TypeError:
         return
 
-    devices = []
-
     for aDevice in res:
         devices.append(device(aDevice))
 
+    if not groups:
+        return devices
+
+    uri = constants.uri_groups
+    try:
+        res = json.loads(request(uri))
+    except TypeError:
+        return
+
+    for aGroup in res:
+        devices.append(device(aGroup, is_group=True))
     return devices
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="command")
+    from tradfri import cli
 
-    parser_config_gateway = subparsers.add_parser("list")
-
-    parser_config_gateway = subparsers.add_parser("config")
-    parser_config_gateway.add_argument("IP")
-    parser_config_gateway.add_argument("KEY")
-
-    args = parser.parse_args()
+    args = cli.get_args()
 
     if args.command is not None:
         if args.command == "list":
-            devices = get_devices()
+            devices = get_devices(args.groups)
+            
             for dev in devices:
                 print(dev.Description)
 
