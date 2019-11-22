@@ -18,3 +18,7 @@ attrTransitionTime = "5712"
 # Plugs
 attrPlugControl = "3312"
 attrPlugState = "5850"
+
+# Groups
+attr_group_info = "15002"
+attr_group_members = "9018"

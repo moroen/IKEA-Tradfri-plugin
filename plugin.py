@@ -3,7 +3,7 @@
 # Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.1.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.2.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -58,7 +58,7 @@ class BasePlugin:
 
         return [dev.DeviceID for key, dev in Devices.items()]
 
-    def updateDevice(self, Unit, device_id=None):
+    def updateDevice(self, Unit, device_id=None, override_level=None):
         if device_id is not None:
             self.lights[Unit] = tradfricoap.get_device(device_id)
         else:
@@ -72,12 +72,22 @@ class BasePlugin:
 
         elif Devices[Unit].SwitchType == 7:
             # Dimmer
-            level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
-            Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=level)
+            if self.lights[Unit].Level is not None:
+                if override_level is None:
+                    level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
+                else:
+                    level = override_level
 
+                Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
 
-        if Devices[Unit].DeviceID[-3:] == ":WS" or Devices[Unit].DeviceID[-4:] == ":CWS":
-            Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Color_level))
+        if (
+            Devices[Unit].DeviceID[-3:] == ":WS"
+            or Devices[Unit].DeviceID[-4:] == ":CWS"
+        ):
+            Devices[Unit].Update(
+                nValue=self.lights[Unit].State,
+                sValue=str(self.lights[Unit].Color_level),
+            )
 
     def registerDevices(self):
 
@@ -99,7 +109,9 @@ class BasePlugin:
             ikeaIds.append(devID)
 
             if not devID in unitIds:
-                Domoticz.Debug("Processing: {0}".format(aLight.Description))
+                Domoticz.Debug(
+                    "Processing: {0} - {1}".format(aLight.Description, aLight.Type)
+                )
                 new_unit_id = firstFree()
 
                 if aLight.Type == "Plug":
@@ -237,18 +249,21 @@ class BasePlugin:
 
         if Command == "Set Level":
             if Devices[Unit].DeviceID[-4:] == ":CWS":
-                self.lights[Unit].Color_level=Level
+                self.lights[Unit].Color_level = Level
             if Devices[Unit].DeviceID[-3:] == ":WS":
-                self.lights[Unit].Color_level=Level
+                self.lights[Unit].Color_level = Level
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
-            
+
             if Level == 0:
                 self.lights[Unit].State = 0
             else:
                 self.lights[Unit].State = 1
 
-            self.updateDevice(Unit)
+            if self.lights[Unit].Type == "Group":
+                self.updateDevice(Unit,override_level=Level)    
+            else:
+                self.updateDevice(Unit)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
@@ -272,7 +287,8 @@ class BasePlugin:
         Domoticz.Debug("onDisconnect called")
 
     def onHeartbeat(self):
-        Domoticz.Debug("onHeartbeat called")
+        # Domoticz.Debug("onHeartbeat called")
+        pass
 
 
 global _plugin
