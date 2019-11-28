@@ -256,8 +256,10 @@ class BasePlugin:
                 self.lights[Unit].Level = int(Level * 2.54)
 
             if Level == 0:
+                Domoticz.Debug("Level is 0, setting state to 0")
                 self.lights[Unit].State = 0
             else:
+                Domoticz.Debug("Level is > 0, setting state to 1")
                 self.lights[Unit].State = 1
 
             if self.lights[Unit].Type == "Group":
