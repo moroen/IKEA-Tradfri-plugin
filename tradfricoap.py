@@ -164,22 +164,29 @@ class device:
 
     @Level.setter
     def Level(self, level):
+ 
+        state = 0 if level == 0 else 1
+        
         if self._is_group:
             uri = "{}/{}".format(constants.uri_groups, self._id)
-            payload = '{{ "{0}": {1}, "{2}": {3} }}'.format(
+            payload = '{{ "{4}": {5}, "{0}": {1}, "{2}": {3} }}'.format(
                 constants.attrLightDimmer,
                 level,
                 constants.attrTransitionTime,
                 _transition_time,
+                constants.attrLightState,
+                state
             )
         else:
             uri = "{}/{}".format(constants.uriDevices, self._id)
-            payload = '{{ "{0}": [{{ "{1}": {2}, "{3}": {4} }}] }}'.format(
+            payload = '{{ "{0}": [{{ "{5}": {6}, "{1}": {2}, "{3}": {4} }}] }}'.format(
                 constants.attrLightControl,
                 constants.attrLightDimmer,
                 level,
                 constants.attrTransitionTime,
                 _transition_time,
+                constants.attrLightState,
+                state
             )
 
         request(uri, payload)

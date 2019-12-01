@@ -202,6 +202,8 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
+        Domoticz.Heartbeat(60)
+
         tradfricoap.set_transition_time(Parameters["Mode4"])
         self.registerDevices()
 
@@ -240,12 +242,14 @@ class BasePlugin:
         )
 
         if Command == "On":
-            self.lights[Unit].State = 1
+            self.lights[Unit].State = 1 
             self.updateDevice(Unit)
+            return
 
         if Command == "Off":
             self.lights[Unit].State = 0
             self.updateDevice(Unit)
+            return
 
         if Command == "Set Level":
             if Devices[Unit].DeviceID[-4:] == ":CWS":
@@ -255,12 +259,12 @@ class BasePlugin:
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
 
-            if Level == 0:
-                Domoticz.Debug("Level is 0, setting state to 0")
-                self.lights[Unit].State = 0
-            else:
-                Domoticz.Debug("Level is > 0, setting state to 1")
-                self.lights[Unit].State = 1
+            # if Level == 0:
+            #     Domoticz.Debug("Level is 0, setting state to 0")
+            #     self.lights[Unit].State = 0
+            # else:
+            #     Domoticz.Debug("Level is > 0, setting state to 1")
+            #     self.lights[Unit].State = 1
 
             if self.lights[Unit].Type == "Group":
                 self.updateDevice(Unit,override_level=Level)    
