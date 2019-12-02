@@ -20,7 +20,7 @@
                 <option label="No" value="False"  default="true" />
             </options>
         </param>
-        <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="30"/>
+        <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
         <param field="Mode4" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
         <param field="Mode6" label="Debug" width="75px">
             <options>
@@ -31,19 +31,27 @@
     </params>
 </plugin>
 """
+import json
+import site
+import sys
+import threading
+import time
+import datetime
+
 import Domoticz
-import site, sys, time, threading, json
-
-site.main()
-
 import tradfricoap
 from tradfri.colors import WhiteOptions, colorOptions
+
+site.main()
 
 
 class BasePlugin:
     enabled = False
 
     lights = {}
+
+    lastPollTime = None
+    pollInterval = None
 
     def __init__(self):
         # self.var = 123
@@ -60,7 +68,7 @@ class BasePlugin:
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
         if device_id is not None:
-            self.lights[Unit] = tradfricoap.get_device(device_id)
+            self.lights[Unit] = tradfricoap.device(id=device_id)
         else:
             self.lights[Unit].Update()
 
@@ -90,7 +98,6 @@ class BasePlugin:
             )
 
     def registerDevices(self):
-
         unitIds = self.indexRegisteredDevices()
         ikeaIds = []
 
@@ -150,10 +157,10 @@ class BasePlugin:
                         DeviceID=devID,
                     ).Create()
                     self.updateDevice(new_unit_id, devID)
-                    if aLight.ColorSpace == "W":
+                    if aLight.Color_space == "W":
                         continue
 
-            if aLight.ColorSpace == "CWS" and devID + ":CWS" not in unitIds:
+            if aLight.Color_space == "CWS" and devID + ":CWS" not in unitIds:
                 new_unit_id = firstFree()
                 Domoticz.Debug("Registering: {0}:CWS".format(aLight.DeviceID))
                 Domoticz.Device(
@@ -166,7 +173,7 @@ class BasePlugin:
                 ).Create()
                 self.updateDevice(new_unit_id, devID)
 
-            if aLight.ColorSpace == "WS" and devID + ":WS" not in unitIds:
+            if aLight.Color_space == "WS" and devID + ":WS" not in unitIds:
                 new_unit_id = firstFree()
                 Domoticz.Debug("Registering: {0}:WS".format(aLight.DeviceID))
                 Domoticz.Device(
@@ -202,7 +209,8 @@ class BasePlugin:
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
 
-        Domoticz.Heartbeat(60)
+        self.pollInterval = int(Parameters["Mode3"])
+        self.lastPollTime = datetime.datetime.now()
 
         tradfricoap.set_transition_time(Parameters["Mode4"])
         self.registerDevices()
@@ -242,7 +250,7 @@ class BasePlugin:
         )
 
         if Command == "On":
-            self.lights[Unit].State = 1 
+            self.lights[Unit].State = 1
             self.updateDevice(Unit)
             return
 
@@ -259,15 +267,8 @@ class BasePlugin:
             else:
                 self.lights[Unit].Level = int(Level * 2.54)
 
-            # if Level == 0:
-            #     Domoticz.Debug("Level is 0, setting state to 0")
-            #     self.lights[Unit].State = 0
-            # else:
-            #     Domoticz.Debug("Level is > 0, setting state to 1")
-            #     self.lights[Unit].State = 1
-
             if self.lights[Unit].Type == "Group":
-                self.updateDevice(Unit,override_level=Level)    
+                self.updateDevice(Unit, override_level=Level)
             else:
                 self.updateDevice(Unit)
 
@@ -294,7 +295,11 @@ class BasePlugin:
 
     def onHeartbeat(self):
         # Domoticz.Debug("onHeartbeat called")
-        pass
+        if Parameters["Mode2"] == "True":
+            interval = (datetime.datetime.now() - self.lastPollTime).seconds
+            if interval + 1 > self.pollInterval:
+                self.lastPollTime = datetime.datetime.now()
+                self.indexRegisteredDevices()
 
 
 global _plugin
