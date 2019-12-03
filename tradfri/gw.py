@@ -4,7 +4,7 @@ from .config import host_config
 from json import loads, dumps
 
 
-def create_ident(ip, key):
+def create_ident(ip, key, configFile=None):
     import uuid
 
     identity = uuid.uuid4().hex
@@ -18,7 +18,7 @@ def create_ident(ip, key):
         )
     )
 
-    conf_obj = host_config()
+    conf_obj = host_config(configFile)
 
     conf_obj.set_config_items(Gateway=ip, Identity=identity, Passkey=res["9091"])
     conf_obj.save()

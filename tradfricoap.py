@@ -1,5 +1,5 @@
 # Standard library
-import json, logging, time, sys, site, argparse
+import json, logging, time, sys, site, argparse, os
 
 # Module
 from tradfri.config import get_config, host_config
@@ -11,15 +11,22 @@ site.main()
 import pycoap
 
 # logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 _transition_time = 10
 
 pycoap.setDebugLevel(1)
 
+CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+
 
 def request(uri, payload=None):
-    conf = get_config()
+
+    conf = get_config(CONFIGFILE)
+
+    if conf["Gateway"] is None:
+        logging.critical("Gateway not specified")
+        return
 
     if payload == None:
         return pycoap.Request(
@@ -338,10 +345,13 @@ if __name__ == "__main__":
         if args.command == "list":
             devices = get_devices(args.groups)
 
-            for dev in devices:
-                print(dev.Description)
+            if devices is None:
+                logging.critical("Unable to get list of devices")
+            else:
+                for dev in devices:
+                    print(dev.Description)
 
         elif args.command == "config":
             from tradfri.gw import create_ident
 
-            create_ident(args.IP, args.KEY)
+            create_ident(args.IP, args.KEY, CONFIGFILE)
