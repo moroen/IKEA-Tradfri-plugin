@@ -7,12 +7,10 @@ The plugin supports and is able to controll the following devices:
 - Floalt LED Panels
 - Tradfri LED-drivers
 
-The plugin partly works with:
-- Remotes - It's possible to monitor battery levels, but not using a tradfri remote to controll lights through domoticz
-
 The plugin doesn't work with:
 - Motion sensors
-- Curtains
+- Remotes
+- Curtains (support is planned)
 
 ## Requirements:
 1. Python version 3.5.3 or higher, 3.7.x recommended. 
