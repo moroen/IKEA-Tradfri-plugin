@@ -1,0 +1,2 @@
+appdirs
+git+git://github.com/moroen/pycoap.git#egg=pycoap
