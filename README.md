@@ -19,6 +19,9 @@ The plugin doesn't work with:
    
 
 ## Local Installation
+
+For instructions on installing the plugin on a Raspberry PI, please see the [readme](README-PI.md) for Raspberry.
+
 ### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
 ```
 $ cd domoticz/plugins/
