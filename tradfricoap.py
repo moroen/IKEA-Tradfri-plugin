@@ -15,10 +15,16 @@ import pycoap
 
 _transition_time = 10
 
-pycoap.setDebugLevel(1)
+_debug = 0
 
 CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
 
+def setDebugLevel(level):
+    global _debug
+    _debug = level
+    pycoap.setDebugLevel(level)
+    if level == 1:
+        logging.basicConfig(level=logging.DEBUG)
 
 def request(uri, payload=None):
 
@@ -280,6 +286,12 @@ class device:
     @property
     def Members(self):
         if len(self._group_members) == 0:
+            logging.debug("Getting members for device {}".format(self.DeviceID))
+
+            if self.device is None:
+                logging.debug("Device {} has no device info".format(self.DeviceID))
+                return None
+                
             for id in self.device[constants.attr_group_members][
                 constants.attr_group_info
             ][constants.attrId]:

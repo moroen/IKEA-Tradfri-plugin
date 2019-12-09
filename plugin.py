@@ -208,6 +208,7 @@ class BasePlugin:
 
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
+            tradfricoap.setDebugLevel(1)
 
         self.pollInterval = int(Parameters["Mode3"])
         self.lastPollTime = datetime.datetime.now()
