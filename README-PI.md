@@ -4,7 +4,7 @@
 
 ### 1. Install needed packages
 ```
-$ sudo apt install golang python3 python3-dev python3 pip
+$ sudo apt install golang python3 python3-dev python3-pip
 ```
 
 ### 2. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
