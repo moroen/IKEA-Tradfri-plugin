@@ -6,6 +6,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
 
+    parser.add_argument("--debug", action="store_true")
+
     subparsers.add_parser("test")
 
     parser_list = subparsers.add_parser("list")

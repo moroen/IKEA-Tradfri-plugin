@@ -338,6 +338,9 @@ if __name__ == "__main__":
 
     args = cli.get_args()
 
+    if args.debug:
+        setDebugLevel(1)
+
     if args.command is not None:
         if args.command == "test":
             # dev = get_device(158578, is_group=True)
