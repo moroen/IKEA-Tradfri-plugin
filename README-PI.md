@@ -1,29 +1,44 @@
 # A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
 ## Instructions for installing on a Raspberry Pi
+Verified on raspbian Buster, kernel 4.19.75-v7+
 
-### 1. Install needed packages
+### 1. Install domoticz
+This will install the latest precompiled binary, default location is recommended
+```
+$ curl -L https://install.domoticz.com | bash
+```
+
+### 2. Install needed packages
 ```
 $ sudo apt install golang python3 python3-dev python3-pip
 ```
 
-### 2. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
+### 3. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
 ```
-$ cd domoticz/plugins/
-$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
+$ cd home/pi/domoticz/plugins/
+$ git clone --branch pycoap https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 $ cd IKEA-Tradfri
-$ git checkout pycoap
 ```
 
-### 2. Update pip and setuptools
+### 4. Update pip and setuptools
 ```shell
 $ sudo -H pip3 install --upgrade pip
 $ sudo -H pip3 install --upgrade setuptools
 ```
 
-### 3. Install other requirements
+### 5. Install other requirements
 ```shell
 $ sudo -H pip3 install -r requirements-pi.txt
 ```
 
-### 4. Continue from point 4 in the main [readme](README.md).
+### 6. Configure and test connection 
+```shell
+$ python3 tradfricoap.py config IP KEY
+$ python3 tradfricoap.py list
+```
+### 7. Refer to the main [readme](README.md) for domoticz setup and usage
+Note: You might need to restart domoticz to enable the plugin
+```shell
+$ sudo systemctl restart domoticz.service
+```
