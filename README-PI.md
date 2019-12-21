@@ -11,12 +11,13 @@ $ curl -L https://install.domoticz.com | bash
 
 ### 2. Install needed packages
 ```
+$ sudo apt update; sudo apt upgrade
 $ sudo apt install golang python3 python3-dev python3-pip
 ```
 
 ### 3. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
 ```
-$ cd home/pi/domoticz/plugins/
+$ cd /home/pi/domoticz/plugins/
 $ git clone --branch pycoap https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 $ cd IKEA-Tradfri
 ```
