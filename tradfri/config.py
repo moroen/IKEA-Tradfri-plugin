@@ -4,7 +4,6 @@ logger = logging.getLogger(__name__)
 
 global_conf = None
 
-
 class host_config(object):
     _confObj = {}
 

@@ -3,7 +3,8 @@
 # Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.4.3" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - py
+version" author="moroen" version="0.4.3" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -39,7 +40,10 @@ import time
 import datetime
 
 import Domoticz
+
 import tradfricoap
+from tradfricoap import HandshakeError
+
 from tradfri.colors import WhiteOptions, colorOptions
 
 site.main()
@@ -62,15 +66,23 @@ class BasePlugin:
             # Some devices are already defined
             for aUnit in Devices:
                 dev_id = Devices[aUnit].DeviceID.split(":")
-                self.updateDevice(aUnit, dev_id[0])
+                try:
+                    self.updateDevice(aUnit, dev_id[0])
+                except HandshakeError:
+                    break
 
         return [dev.DeviceID for key, dev in Devices.items()]
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
-        if device_id is not None:
-            self.lights[Unit] = tradfricoap.device(id=device_id)
-        else:
-            self.lights[Unit].Update()
+        Domoticz.Debug("Updating device {}".format(device_id))
+        try:
+            if device_id is not None:
+                self.lights[Unit] = tradfricoap.device(id=device_id)
+            else:
+                self.lights[Unit].Update()
+        except HandshakeError:
+            Domoticz.Error("Error updating device {}: Connection time out".format(device_id))
+            raise
 
         if Devices[Unit].SwitchType == 0:
             # On/off - device
@@ -102,10 +114,14 @@ class BasePlugin:
         ikeaIds = []
 
         # Add unregistred lights
-        if Parameters["Mode1"] == "True":
-            tradfriDevices = tradfricoap.get_devices(groups=True)
-        else:
-            tradfriDevices = tradfricoap.get_devices()
+        try:
+            if Parameters["Mode1"] == "True":
+                tradfriDevices = tradfricoap.get_devices(groups=True)
+            else:
+                tradfriDevices = tradfricoap.get_devices()
+        except HandShakeError:
+            Domoticz.Log("Connection to gateway timed out")
+            return
 
         if tradfriDevices == None:
             Domoticz.Log("Failed to get Tradfri-devices")
@@ -208,7 +224,7 @@ class BasePlugin:
 
         if Parameters["Mode6"] == "Debug":
             Domoticz.Debugging(1)
-            tradfricoap.setDebugLevel(1)
+            tradfricoap.set_debug_level(1)
 
         self.pollInterval = int(Parameters["Mode3"])
         self.lastPollTime = datetime.datetime.now()

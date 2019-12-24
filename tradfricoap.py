@@ -8,7 +8,14 @@ from tradfri import colors
 
 site.main()
 
-import pycoap
+# import pycoap
+
+try: 
+    from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
+except ModuleNotFoundError:
+    raise
+
+# from tradfri.coapcmd_api import request, set_debug_level
 
 # logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 # logger = logging.getLogger(__name__)
@@ -18,41 +25,13 @@ _transition_time = 10
 _debug = 0
 
 CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-
-def setDebugLevel(level):
-    global _debug
-    _debug = level
-    pycoap.setDebugLevel(level)
-    if level == 1:
-        logging.basicConfig(level=logging.DEBUG)
-
-def request(uri, payload=None):
-
-    conf = get_config(CONFIGFILE)
-
-    if conf["Gateway"] is None:
-        logging.critical("Gateway not specified")
-        return
-
-    if payload == None:
-        return pycoap.Request(
-            uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
-            ident=conf["Identity"],
-            key=conf["Passkey"],
-        )
-    else:
-        return pycoap.Request(
-            uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
-            payload=payload,
-            method=pycoap.PUT,
-            ident=conf["Identity"],
-            key=conf["Passkey"],
-        )
-
+get_config(CONFIGFILE)
 
 def set_transition_time(tt):
     global _transition_time
     _transition_time = int(tt)
+
+# def setDebugLevel(level):
 
 
 class device:
@@ -65,12 +44,19 @@ class device:
     def __init__(self, id, is_group=False):
         self._id = id
 
+        res = None
+
         if is_group == True:
             self._is_group = True
 
         if not self._is_group:
-            uri = "{}/{}".format(constants.uriDevices, id)
-            res = request(uri)
+            try:
+                uri = "{}/{}".format(constants.uriDevices, id)
+                res = request(uri)
+            except HandshakeError:
+                raise
+            except UriNotFoundError:
+                pass
 
             if res == None:
                 self.__init__(id, is_group=True)
@@ -90,7 +76,10 @@ class device:
                     pass
         else:
             uri = "{}/{}".format(constants.uri_groups, id)
-            res = request(uri)
+            try:
+                res = request(uri)
+            except HandshakeError:
+                raise
 
             try:
                 self.device = json.loads(res)
@@ -313,6 +302,9 @@ def get_devices(groups=False):
         res = json.loads(request(uri))
     except TypeError:
         return
+    except HandshakeError:
+        logging.error("Can't get devices, connection time out")
+        return None
 
     for aDevice in res:
         devices.append(device(aDevice))
@@ -345,7 +337,11 @@ if __name__ == "__main__":
         if args.command == "test":
             # dev = get_device(158578, is_group=True)
 
-            dev = device(158578)
+            try:
+                dev = device(158578)
+            except UriNotFoundError:
+                logging.error("Uri not found")
+                exit()
 
             print(
                 dev.Description, dev.State, dev.Level, dev.Color_space, dev.Color_level
@@ -358,7 +354,11 @@ if __name__ == "__main__":
             # dev.Color_level = 30 if dev.Color_level == 10 else 10
 
         if args.command == "list":
-            devices = get_devices(args.groups)
+            try:
+                devices = get_devices(args.groups)
+            except HandshakeError:
+                print("Connection timed out")
+                exit()
 
             if devices is None:
                 logging.critical("Unable to get list of devices")
