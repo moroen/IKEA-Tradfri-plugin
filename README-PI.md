@@ -43,3 +43,14 @@ Note: You might need to restart domoticz to enable the plugin
 ```shell
 $ sudo systemctl restart domoticz.service
 ```
+
+## Alternative installation of pycoap
+On some systems, installing pycoap using pip fails. Installing pycoap manually might help, or at least give some more information on why installation fails.
+
+```shell
+$ git clone https://github.com/moroen/pycoap.git
+$ cd pycoap
+$ sudo -H python3 setup.py install
+```
+
+Note: The basic requirements, as described at point 2 above, still need to be installed when using this alternative method.

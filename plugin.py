@@ -57,6 +57,8 @@ class BasePlugin:
     lastPollTime = None
     pollInterval = None
 
+    hasTimedOut = False
+
     def __init__(self):
         # self.var = 123
         return
@@ -69,7 +71,10 @@ class BasePlugin:
                 try:
                     self.updateDevice(aUnit, dev_id[0])
                 except HandshakeError:
+                    self.hasTimedOut = True
                     break
+                else:
+                    self.hasTimedOut = False
 
         return [dev.DeviceID for key, dev in Devices.items()]
 
@@ -82,7 +87,9 @@ class BasePlugin:
                 self.lights[Unit].Update()
         except HandshakeError:
             Domoticz.Error("Error updating device {}: Connection time out".format(device_id))
-            raise
+            self.hasTimedOut = True
+        else:
+            self.hasTimedOut = False
 
         if Devices[Unit].SwitchType == 0:
             # On/off - device
@@ -121,7 +128,10 @@ class BasePlugin:
                 tradfriDevices = tradfricoap.get_devices()
         except HandShakeError:
             Domoticz.Log("Connection to gateway timed out")
+            self.hasTimedOut = True
             return
+        else:
+            self.hasTimedOut = False
 
         if tradfriDevices == None:
             Domoticz.Log("Failed to get Tradfri-devices")
@@ -312,11 +322,14 @@ class BasePlugin:
 
     def onHeartbeat(self):
         # Domoticz.Debug("onHeartbeat called")
-        if Parameters["Mode2"] == "True":
-            interval = (datetime.datetime.now() - self.lastPollTime).seconds
-            if interval + 1 > self.pollInterval:
-                self.lastPollTime = datetime.datetime.now()
-                self.indexRegisteredDevices()
+        if self.hasTimedOut:
+            self.registerDevices()
+        else:
+            if Parameters["Mode2"] == "True":
+                interval = (datetime.datetime.now() - self.lastPollTime).seconds
+                if interval + 1 > self.pollInterval:
+                    self.lastPollTime = datetime.datetime.now()
+                    self.indexRegisteredDevices()
 
 
 global _plugin
