@@ -66,17 +66,17 @@ class BasePlugin:
     def indexRegisteredDevices(self):
         if len(Devices) > 0:
             # Some devices are already defined
-            for aUnit in Devices:
-                dev_id = Devices[aUnit].DeviceID.split(":")
-                try:
+            try:
+                for aUnit in Devices:
+                    dev_id = Devices[aUnit].DeviceID.split(":")
                     self.updateDevice(aUnit, dev_id[0])
-                except HandshakeError:
-                    self.hasTimedOut = True
-                    break
-                else:
-                    self.hasTimedOut = False
 
-        return [dev.DeviceID for key, dev in Devices.items()]
+                return [dev.DeviceID for key, dev in Devices.items()]
+            except HandshakeError:
+                self.hasTimedOut = True
+                return 
+            else:
+                self.hasTimedOut = False
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
         Domoticz.Debug("Updating device {}".format(device_id))
@@ -85,39 +85,44 @@ class BasePlugin:
                 self.lights[Unit] = tradfricoap.device(id=device_id)
             else:
                 self.lights[Unit].Update()
+
+            if Devices[Unit].SwitchType == 0:
+                # On/off - device
+                Devices[Unit].Update(
+                    nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
+                )
+
+            elif Devices[Unit].SwitchType == 7:
+                # Dimmer
+                if self.lights[Unit].Level is not None:
+                    if override_level is None:
+                        level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
+                    else:
+                        level = override_level
+
+                    Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+
+            if (
+                Devices[Unit].DeviceID[-3:] == ":WS"
+                or Devices[Unit].DeviceID[-4:] == ":CWS"
+            ):
+                Devices[Unit].Update(
+                    nValue=self.lights[Unit].State,
+                    sValue=str(self.lights[Unit].Color_level),
+                )
+
         except HandshakeError:
             Domoticz.Error("Error updating device {}: Connection time out".format(device_id))
             self.hasTimedOut = True
+            raise
         else:
             self.hasTimedOut = False
 
-        if Devices[Unit].SwitchType == 0:
-            # On/off - device
-            Devices[Unit].Update(
-                nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
-            )
-
-        elif Devices[Unit].SwitchType == 7:
-            # Dimmer
-            if self.lights[Unit].Level is not None:
-                if override_level is None:
-                    level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
-                else:
-                    level = override_level
-
-                Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
-
-        if (
-            Devices[Unit].DeviceID[-3:] == ":WS"
-            or Devices[Unit].DeviceID[-4:] == ":CWS"
-        ):
-            Devices[Unit].Update(
-                nValue=self.lights[Unit].State,
-                sValue=str(self.lights[Unit].Color_level),
-            )
-
     def registerDevices(self):
         unitIds = self.indexRegisteredDevices()
+        if self.hasTimedOut:
+            return
+            
         ikeaIds = []
 
         # Add unregistred lights
@@ -126,108 +131,109 @@ class BasePlugin:
                 tradfriDevices = tradfricoap.get_devices(groups=True)
             else:
                 tradfriDevices = tradfricoap.get_devices()
+        
+            if tradfriDevices == None:
+                Domoticz.Log("Failed to get Tradfri-devices")
+                return
+
+            for aLight in tradfriDevices:
+                devID = str(aLight.DeviceID)
+                ikeaIds.append(devID)
+
+                if not devID in unitIds:
+                    Domoticz.Debug(
+                        "Processing: {0} - {1}".format(aLight.Description, aLight.Type)
+                    )
+                    new_unit_id = firstFree()
+
+                    if aLight.Type == "Plug":
+                        Domoticz.Device(
+                            Name=aLight.Name,
+                            Unit=new_unit_id,
+                            Type=244,
+                            Subtype=73,
+                            Switchtype=0,
+                            Image=1,
+                            DeviceID=devID,
+                        ).Create()
+                        self.updateDevice(new_unit_id, devID)
+
+                    if aLight.Type == "Remote":
+                        Domoticz.Device(
+                            Name=aLight.Name + " - Battery level",
+                            Unit=new_unit_id,
+                            Type=243,
+                            Subtype=6,
+                            DeviceID=devID,
+                        ).Create()
+
+                    if aLight.Type == "Light" or aLight.Type == "Group":
+                        deviceType = 244
+                        subType = 73
+                        switchType = 7
+
+                        # Basic device
+                        Domoticz.Device(
+                            Name=aLight.Name,
+                            Unit=new_unit_id,
+                            Type=deviceType,
+                            Subtype=subType,
+                            Switchtype=switchType,
+                            DeviceID=devID,
+                        ).Create()
+                        self.updateDevice(new_unit_id, devID)
+                        if aLight.Color_space == "W":
+                            continue
+
+                if aLight.Color_space == "CWS" and devID + ":CWS" not in unitIds:
+                    new_unit_id = firstFree()
+                    Domoticz.Debug("Registering: {0}:CWS".format(aLight.DeviceID))
+                    Domoticz.Device(
+                        Name=aLight.Name + " - Color",
+                        Unit=new_unit_id,
+                        TypeName="Selector Switch",
+                        Switchtype=18,
+                        Options=colorOptions,
+                        DeviceID=devID + ":CWS",
+                    ).Create()
+                    self.updateDevice(new_unit_id, devID)
+
+                if aLight.Color_space == "WS" and devID + ":WS" not in unitIds:
+                    new_unit_id = firstFree()
+                    Domoticz.Debug("Registering: {0}:WS".format(aLight.DeviceID))
+                    Domoticz.Device(
+                        Name=aLight.Name + " - Color",
+                        Unit=new_unit_id,
+                        TypeName="Selector Switch",
+                        Switchtype=18,
+                        Options=WhiteOptions,
+                        DeviceID=devID + ":WS",
+                    ).Create()
+                    self.updateDevice(new_unit_id, devID)
+
+            # Remove registered lights no longer found on the gateway
+
+            for aUnit in list(Devices.keys()):
+                devID = str(Devices[aUnit].DeviceID)
+
+                if devID[-3:] == ":WS":
+                    devID = devID[:-3]
+
+                if devID[-4:] == ":CWS":
+                    devID = devID[:-4]
+
+                if devID[-4:] == ":RGB":
+                    devID = devID[:-4]
+
+                if not devID in ikeaIds:
+                    Devices[aUnit].Delete()
+
         except HandShakeError:
             Domoticz.Log("Connection to gateway timed out")
             self.hasTimedOut = True
             return
         else:
             self.hasTimedOut = False
-
-        if tradfriDevices == None:
-            Domoticz.Log("Failed to get Tradfri-devices")
-            return
-
-        for aLight in tradfriDevices:
-            devID = str(aLight.DeviceID)
-            ikeaIds.append(devID)
-
-            if not devID in unitIds:
-                Domoticz.Debug(
-                    "Processing: {0} - {1}".format(aLight.Description, aLight.Type)
-                )
-                new_unit_id = firstFree()
-
-                if aLight.Type == "Plug":
-                    Domoticz.Device(
-                        Name=aLight.Name,
-                        Unit=new_unit_id,
-                        Type=244,
-                        Subtype=73,
-                        Switchtype=0,
-                        Image=1,
-                        DeviceID=devID,
-                    ).Create()
-                    self.updateDevice(new_unit_id, devID)
-
-                if aLight.Type == "Remote":
-                    Domoticz.Device(
-                        Name=aLight.Name + " - Battery level",
-                        Unit=new_unit_id,
-                        Type=243,
-                        Subtype=6,
-                        DeviceID=devID,
-                    ).Create()
-
-                if aLight.Type == "Light" or aLight.Type == "Group":
-                    deviceType = 244
-                    subType = 73
-                    switchType = 7
-
-                    # Basic device
-                    Domoticz.Device(
-                        Name=aLight.Name,
-                        Unit=new_unit_id,
-                        Type=deviceType,
-                        Subtype=subType,
-                        Switchtype=switchType,
-                        DeviceID=devID,
-                    ).Create()
-                    self.updateDevice(new_unit_id, devID)
-                    if aLight.Color_space == "W":
-                        continue
-
-            if aLight.Color_space == "CWS" and devID + ":CWS" not in unitIds:
-                new_unit_id = firstFree()
-                Domoticz.Debug("Registering: {0}:CWS".format(aLight.DeviceID))
-                Domoticz.Device(
-                    Name=aLight.Name + " - Color",
-                    Unit=new_unit_id,
-                    TypeName="Selector Switch",
-                    Switchtype=18,
-                    Options=colorOptions,
-                    DeviceID=devID + ":CWS",
-                ).Create()
-                self.updateDevice(new_unit_id, devID)
-
-            if aLight.Color_space == "WS" and devID + ":WS" not in unitIds:
-                new_unit_id = firstFree()
-                Domoticz.Debug("Registering: {0}:WS".format(aLight.DeviceID))
-                Domoticz.Device(
-                    Name=aLight.Name + " - Color",
-                    Unit=new_unit_id,
-                    TypeName="Selector Switch",
-                    Switchtype=18,
-                    Options=WhiteOptions,
-                    DeviceID=devID + ":WS",
-                ).Create()
-                self.updateDevice(new_unit_id, devID)
-
-        # Remove registered lights no longer found on the gateway
-
-        for aUnit in list(Devices.keys()):
-            devID = str(Devices[aUnit].DeviceID)
-
-            if devID[-3:] == ":WS":
-                devID = devID[:-3]
-
-            if devID[-4:] == ":CWS":
-                devID = devID[:-4]
-
-            if devID[-4:] == ":RGB":
-                devID = devID[:-4]
-
-            if not devID in ikeaIds:
-                Devices[aUnit].Delete()
 
     def onStart(self):
         Domoticz.Debug("onStart called")
@@ -323,6 +329,7 @@ class BasePlugin:
     def onHeartbeat(self):
         # Domoticz.Debug("onHeartbeat called")
         if self.hasTimedOut:
+            Domoticz.Debug("Timeout flag set, retrying...")
             self.registerDevices()
         else:
             if Parameters["Mode2"] == "True":
