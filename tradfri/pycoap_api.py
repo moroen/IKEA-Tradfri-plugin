@@ -1,7 +1,7 @@
 import logging
 
 try: 
-    from pycoap import setDebugLevel, Request, __version__
+    from pycoap import setDebugLevel, Request, __version__, POST, PUT, GET
     from pycoap.errors import HandshakeError, UriNotFoundError
 
 except ModuleNotFoundError:
@@ -35,7 +35,7 @@ def request(uri, payload=None):
         return Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,
-            method=pycoap.PUT,
+            method=PUT,
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
