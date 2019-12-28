@@ -48,7 +48,6 @@ from tradfri.colors import WhiteOptions, colorOptions
 
 site.main()
 
-
 class BasePlugin:
     enabled = False
 

@@ -1,3 +1,6 @@
+
+__version__ = "0.5.2"
+
 # Standard library
 import json, logging, time, sys, site, argparse, os
 
