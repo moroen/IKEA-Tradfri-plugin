@@ -306,8 +306,8 @@ def get_devices(groups=False):
     except TypeError:
         return
     except HandshakeError:
-        logging.error("Can't get devices, connection time out")
-        return None
+        logging.debug("Can't get devices, connection time out")
+        raise
 
     for aDevice in res:
         devices.append(device(aDevice))

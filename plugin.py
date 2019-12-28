@@ -76,6 +76,9 @@ class BasePlugin:
                 return 
             else:
                 self.hasTimedOut = False
+        else:
+            deviceID=[-1]
+            return deviceID
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
         Domoticz.Debug("Updating device {}".format(device_id))
@@ -227,8 +230,8 @@ class BasePlugin:
                 if not devID in ikeaIds:
                     Devices[aUnit].Delete()
 
-        except HandShakeError:
-            Domoticz.Log("Connection to gateway timed out")
+        except HandshakeError:
+            Domoticz.Error("Connection to gateway timed out")
             self.hasTimedOut = True
             return
         else:
@@ -329,6 +332,7 @@ class BasePlugin:
         # Domoticz.Debug("onHeartbeat called")
         if self.hasTimedOut:
             Domoticz.Debug("Timeout flag set, retrying...")
+            self.hasTimedOut = False
             self.registerDevices()
         else:
             if Parameters["Mode2"] == "True":
