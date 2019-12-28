@@ -4,7 +4,7 @@
 #
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - py
-version" author="moroen" version="0.5.4" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+version" author="moroen" version="0.5.5" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
