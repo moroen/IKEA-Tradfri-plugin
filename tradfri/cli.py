@@ -17,4 +17,7 @@ def get_args():
     parser_config_gateway.add_argument("IP")
     parser_config_gateway.add_argument("KEY")
 
+    parser_config_api = subparsers.add_parser("api")
+    parser_config_api.add_argument("API", choices=["pycoap", "coapcmd"])
+    
     return parser.parse_args()

@@ -41,10 +41,12 @@ import datetime
 
 import Domoticz
 
-import tradfricoap
-from tradfricoap import HandshakeError
-
-from tradfri.colors import WhiteOptions, colorOptions
+try:
+    import tradfricoap
+    from tradfricoap import HandshakeError
+    from tradfri.colors import WhiteOptions, colorOptions
+except ModuleNotFoundError:
+    pass
 
 site.main()
 
@@ -240,15 +242,18 @@ class BasePlugin:
     def onStart(self):
         Domoticz.Debug("onStart called")
 
-        if Parameters["Mode6"] == "Debug":
-            Domoticz.Debugging(1)
-            tradfricoap.set_debug_level(1)
+        try:
+            if Parameters["Mode6"] == "Debug":
+                Domoticz.Debugging(1)
+                tradfricoap.set_debug_level(1)
 
-        self.pollInterval = int(Parameters["Mode3"])
-        self.lastPollTime = datetime.datetime.now()
+            self.pollInterval = int(Parameters["Mode3"])
+            self.lastPollTime = datetime.datetime.now()
 
-        tradfricoap.set_transition_time(Parameters["Mode4"])
-        self.registerDevices()
+            tradfricoap.set_transition_time(Parameters["Mode4"])
+            self.registerDevices()
+        except NameError:
+            Domoticz.Error("Failed to initialize tradfri module.")
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
@@ -336,10 +341,13 @@ class BasePlugin:
             self.registerDevices()
         else:
             if Parameters["Mode2"] == "True":
-                interval = (datetime.datetime.now() - self.lastPollTime).seconds
-                if interval + 1 > self.pollInterval:
-                    self.lastPollTime = datetime.datetime.now()
-                    self.indexRegisteredDevices()
+                if self.lastPollTime is None:
+                    Domoticz.Error("Plugin not intialized!")
+                else:
+                    interval = (datetime.datetime.now() - self.lastPollTime).seconds
+                    if interval + 1 > self.pollInterval:
+                        self.lastPollTime = datetime.datetime.now()
+                        self.indexRegisteredDevices()
 
 
 global _plugin

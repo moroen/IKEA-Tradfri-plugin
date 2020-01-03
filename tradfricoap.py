@@ -7,35 +7,57 @@ import json, logging, time, sys, site, argparse, os
 # Module
 from tradfri.config import get_config, host_config
 from tradfri import constants
-from tradfri import colors
+from tradfri import colors, cli
 
 site.main()
 
-# import pycoap
-
-try: 
-    from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
-except ModuleNotFoundError:
-    raise
-
-# from tradfri.coapcmd_api import request, set_debug_level
-
-# logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
-# logger = logging.getLogger(__name__)
-
 _transition_time = 10
-
 _debug = 0
 
 CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-get_config(CONFIGFILE)
+CONF = get_config(CONFIGFILE)
+
+if CONF["Api"] == "Pycoap":
+    try:
+        from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
+    except ModuleNotFoundError:
+        if __name__ == "__main__":
+            args = cli.get_args()
+            if args.command == "api":
+                config = host_config(CONFIGFILE)
+                config.set_config_item("api", args.API)
+                config.save()
+            else:
+                print("Pycoap module not found!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
+            exit()
+        else:
+            raise
+
+if CONF["Api"] == "Coapcmd":
+    from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError
+
+# args = cli.get_args()
+
+# if args.command == "api":
+#     pass
+# else:
+#     if CONF["Api"] == "Pycoap":
+#         try: 
+#             from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
+#         except ModuleNotFoundError:
+#             if __name__ == "__main__":
+#                 print("Module pycoap not installed!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
+#                 exit()
+#             else:
+#                 raise
+            
+#     elif CONF["Api"] == "Coapcmd":
+#         print("Loading coapcmd-api")
+#         from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError
 
 def set_transition_time(tt):
     global _transition_time
     _transition_time = int(tt)
-
-# def setDebugLevel(level):
-
 
 class device:
     lightControl = None
@@ -329,14 +351,18 @@ def get_devices(groups=False):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    from tradfri import cli
-
     args = cli.get_args()
 
     if args.debug:
         setDebugLevel(1)
 
     if args.command is not None:
+
+        if args.command == "api":
+                config = host_config(CONFIGFILE)
+                config.set_config_item("api", args.API)
+                config.save()
+
         if args.command == "test":
             # dev = get_device(158578, is_group=True)
 

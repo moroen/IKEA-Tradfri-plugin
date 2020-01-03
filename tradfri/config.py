@@ -15,15 +15,12 @@ class host_config(object):
         self._configFile = "{0}/gateway.json".format(appdirs.user_config_dir(appname="tradfri")) if configFile is None else configFile
 
         self._confObj.update(
-            Server_type="Both",
             Gateway=None,
-            Server_ip="127.0.0.1",
-            Tcp_port=1234,
-            Http_port=8085,
             Identity=None,
             Passkey=None,
             Transition_time=10,
             Verbosity=0,
+            Api="Pycoap"
         )
         self.load()
 
