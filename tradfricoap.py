@@ -19,7 +19,7 @@ CONF = get_config(CONFIGFILE)
 
 if CONF["Api"] == "Pycoap":
     try:
-        from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
+        from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
     except ModuleNotFoundError:
         if __name__ == "__main__":
             args = cli.get_args()
@@ -34,26 +34,20 @@ if CONF["Api"] == "Pycoap":
             raise
 
 if CONF["Api"] == "Coapcmd":
-    from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError
-
-# args = cli.get_args()
-
-# if args.command == "api":
-#     pass
-# else:
-#     if CONF["Api"] == "Pycoap":
-#         try: 
-#             from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError
-#         except ModuleNotFoundError:
-#             if __name__ == "__main__":
-#                 print("Module pycoap not installed!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
-#                 exit()
-#             else:
-#                 raise
-            
-#     elif CONF["Api"] == "Coapcmd":
-#         print("Loading coapcmd-api")
-#         from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError
+    try:
+        from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
+    except ModuleNotFoundError:
+        if __name__ == "__main__":
+            args = cli.get_args()
+            if args.command == "api":
+                config = host_config(CONFIGFILE)
+                config.set_config_item("api", args.API)
+                config.save()
+            else:
+                print("coapcmd  not found!\nInstall with \"bash install_coapcmd.sh\" or select another api with \"python3 tradfricoap.py api\"")
+            exit()
+        else:
+            raise
 
 def set_transition_time(tt):
     global _transition_time
@@ -349,7 +343,7 @@ def get_devices(groups=False):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
     args = cli.get_args()
 
@@ -396,6 +390,7 @@ if __name__ == "__main__":
                     print(dev.Description)
 
         elif args.command == "config":
-            from tradfri.gw import create_ident
-
-            create_ident(args.IP, args.KEY, CONFIGFILE)
+            try:
+                create_ident(args.IP, args.KEY, CONFIGFILE)
+            except HandshakeError:
+                logging.error("Connection timed out")

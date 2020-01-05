@@ -42,7 +42,7 @@ class host_config(object):
         with open(self._configFile, "w") as outfile:
             json.dump(self._confObj, outfile)
 
-        logging.info("Config created")
+        logging.info("Config set")
 
     def set_config_items(self, **kwargs):
         for key, value in kwargs.items():

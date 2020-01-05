@@ -16,8 +16,7 @@ def set_debug_level(level):
     if level == 1:
         logging.basicConfig(level=logging.DEBUG)
 
-def request(uri, payload=None):
-
+def request(uri, payload=None, method="put"):
     conf = get_config()
 
     if conf["Gateway"] is None:
@@ -32,10 +31,38 @@ def request(uri, payload=None):
         )
             
     else:
+        method = POST if method=="post" else PUT
+        print(method, payload)
         return Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,
-            method=PUT,
+            method=method,
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
+
+def create_ident(ip, key, configFile=None):
+    import uuid
+    from .config import host_config, get_config
+    from json import loads, dumps
+
+    identity = uuid.uuid4().hex
+
+    payload = '{{"{}":"{}"}}'.format(9090, identity)
+    uri = "coaps://{}:{}/{}".format(ip, 5684, "15011/9063")
+
+    result = Request(
+            uri, payload=payload, method=POST, ident="Client_identity", key=key
+        )
+    
+    logging.debug("Create ident result: {}".format(result))
+
+    if result is None:
+        logging.critical("Create_ident: No data from gateway")
+        return None
+
+    res = loads(result)
+    conf_obj = host_config(configFile)
+
+    conf_obj.set_config_items(Gateway=ip, Identity=identity, Passkey=res["9091"])
+    conf_obj.save()
