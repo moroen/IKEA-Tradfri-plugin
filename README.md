@@ -34,13 +34,45 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
   $ pip3 install --upgrade setuptools
 ```
 
-### 3. Install other requirements:
+### 3. Installing API for coap requests
+The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
+
+On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For instruction on how to install coapcmd on systems without systems without a working GO compiler, please refer to the repository for coapcmd. 
+
+#### 3a Pycoap (recommended)
+Pycoap is available as precompiled wheels for linux (amd64), Windows (amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
+
 ```shell
   $ pip3 install -r requirements.txt
 ```
 
-#### Local compilation of the pycoap python module:
-The plugin uses manylinux wheels on linux, and there are precompiled wheels for Windows and MacOS available. On other systems, and for installing on a Raspberry PI, a go compiler (version 1.12 or greater recommended) must be installed before installing requirements.txt.
+##### Alternative installation of pycoap
+On some systems, installing pycoap using pip fails. Installing pycoap manually might help, or at least give some more information on why installation fails.
+
+```shell
+$ git clone https://github.com/moroen/pycoap.git
+$ cd pycoap
+$ sudo -H python3 setup.py install
+```
+
+#### 3b coapcmd (alternative)
+The coapcmd command must be installed as IKEA-Tradfri/bin/coapcmd and the plugin configured to use coapcmd for COAP-requests. On systems with git and go installed, coapcmd can be installed with the provided install-script:
+
+```shell
+$ bash install_coapcmd.sh
+```
+
+Configure the plugin to use coapcmd:
+```shell
+$ python3 tradfricoap.py api coapcmd
+```
+
+#### Switching between transports:
+```shell
+$ python3 tradfricoap.py api pycoap # Use pycoap module
+$ python3 tradfricoap.py api coapcmd # Use coapcmd
+```
+
 
 ### 4. Configure Tradfri COAP: 
 ```shell

@@ -51,3 +51,6 @@ $ sudo -H python3 setup.py install
 ```
 
 Note: The basic requirements, as described at point 2 above, still need to be installed when using this alternative method.
+
+## Using coapcmd as an alternative to pycoap
+Please refer to the main [readme](README.md).
