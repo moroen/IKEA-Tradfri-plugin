@@ -22,27 +22,25 @@ The plugin doesn't work with:
 
 For instructions on installing the plugin on a Raspberry PI, please see the [readme](README-PI.md) for Raspberry.
 
-### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory and checkout the pycoap branch
+### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory:
 ```
 $ cd domoticz/plugins/
 $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
-$ cd IKEA-Tradfri
-$ git checkout pycoap
 ```
 
-### 2. Update pip and setuptools
+### 2. Update pip and setuptools:
 ```shell
   $ pip3 install --upgrade pip
   $ pip3 install --upgrade setuptools
 ```
 
-### 3. Install other requirements
+### 3. Install other requirements:
 ```shell
   $ pip3 install -r requirements.txt
 ```
 
-#### Pycoap fails to install
-The plugin uses manylinux wheels on linux, and there are compiled wheels for Windows and MacOS. If the above installation fails, a golang compiler (version 1.12 or greater recommende) must be installed and the above pip3 command runned again.
+#### Local compilation of the pycoap python module:
+The plugin uses manylinux wheels on linux, and there are precompiled wheels for Windows and MacOS available. On other systems, and for installing on a Raspberry PI, a go compiler (version 1.12 or greater recommended) must be installed before installing requirements.txt.
 
 ### 4. Configure Tradfri COAP: 
 ```shell
@@ -54,6 +52,7 @@ The plugin uses manylinux wheels on linux, and there are compiled wheels for Win
 ```shell
   $ python3 tradfricoap.py list
 ```
+
 ### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
 
 ### Observing changes
