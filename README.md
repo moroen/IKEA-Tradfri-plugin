@@ -67,6 +67,8 @@ Configure the plugin to use coapcmd:
 $ python3 tradfricoap.py api coapcmd
 ```
 
+For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options.
+
 #### Switching between transports:
 ```shell
 $ python3 tradfricoap.py api pycoap # Use pycoap module
