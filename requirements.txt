@@ -1,3 +1,2 @@
 --extra-index-url https://test.pypi.org/simple/
-appdirs
 pycoap>=0.6.2

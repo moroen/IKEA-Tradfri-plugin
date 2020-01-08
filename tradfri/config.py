@@ -1,4 +1,4 @@
-import appdirs, logging, os, json
+import logging, os, json
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +12,12 @@ class host_config(object):
 
     def __init__(self, configFile = None):
 
-        self._configFile = "{0}/gateway.json".format(appdirs.user_config_dir(appname="tradfri")) if configFile is None else configFile
-
+        if configFile == None:
+            logging.critical("Configfile not defined...")
+            exit()
+        else:
+            self._configFile = configFile
+        
         self._confObj.update(
             Gateway=None,
             Identity=None,
