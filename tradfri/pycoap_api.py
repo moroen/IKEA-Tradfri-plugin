@@ -4,7 +4,7 @@ try:
     from pycoap import setDebugLevel, Request, __version__, POST, PUT, GET
     from pycoap.errors import HandshakeError, UriNotFoundError
 
-except ModuleNotFoundError:
+except ImportError:
     raise
 
 from .config import get_config

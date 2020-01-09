@@ -17,37 +17,27 @@ _debug = 0
 CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
 CONF = get_config(CONFIGFILE)
 
+if __name__ == "__main__":
+    args = cli.get_args()
+    if args.command == "api":
+        config = host_config(CONFIGFILE)
+        config.set_config_item("api", args.API)
+        config.save()
+        exit()
+
 if CONF["Api"] == "Pycoap":
     try:
         from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
-    except ModuleNotFoundError:
-        if __name__ == "__main__":
-            args = cli.get_args()
-            if args.command == "api":
-                config = host_config(CONFIGFILE)
-                config.set_config_item("api", args.API)
-                config.save()
-            else:
-                print("Pycoap module not found!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
-            exit()
-        else:
-            raise
+    except ImportError:
+        print("Pycoap module not found!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
+        exit()
 
 if CONF["Api"] == "Coapcmd":
     try:
         from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
-    except ModuleNotFoundError:
-        if __name__ == "__main__":
-            args = cli.get_args()
-            if args.command == "api":
-                config = host_config(CONFIGFILE)
-                config.set_config_item("api", args.API)
-                config.save()
-            else:
-                print("coapcmd  not found!\nInstall with \"bash install_coapcmd.sh\" or select another api with \"python3 tradfricoap.py api\"")
-            exit()
-        else:
-            raise
+    except ImportError:
+        print("coapcmd  not found!\nInstall with \"bash install_coapcmd.sh\" or select another api with \"python3 tradfricoap.py api\"")
+        exit()
 
 def set_transition_time(tt):
     global _transition_time

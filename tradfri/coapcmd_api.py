@@ -11,7 +11,7 @@ class UriNotFoundError(Exception):
 _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 
 if not os.path.exists(_coapCMD):
-    raise ModuleNotFoundError
+    raise ImportError
 
 
 
