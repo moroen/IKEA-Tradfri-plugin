@@ -3,7 +3,7 @@
 # Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.6.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.6.1" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
