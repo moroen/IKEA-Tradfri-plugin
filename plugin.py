@@ -97,9 +97,10 @@ class BasePlugin:
 
             if Devices[Unit].SwitchType == 0:
                 # On/off - device
-                Devices[Unit].Update(
-                    nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
-                )
+                if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(self.lights[Unit].Level)): 
+                    Devices[Unit].Update(
+                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
+                    )
 
             elif Devices[Unit].SwitchType == 7:
                 # Dimmer
@@ -109,7 +110,8 @@ class BasePlugin:
                     else:
                         level = override_level
 
-                    Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+                    if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(level)): 
+                        Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
 
             if (
                 Devices[Unit].DeviceID[-3:] == ":WS"

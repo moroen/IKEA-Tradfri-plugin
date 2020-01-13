@@ -310,7 +310,7 @@ class device:
     @property
     def Members(self):
         if len(self._group_members) == 0:
-            logging.debug("Getting members for device {}".format(self.DeviceID))
+            # logging.debug("Getting members for device {}".format(self.DeviceID))
 
             if self.device is None:
                 logging.debug("Device {} has no device info".format(self.DeviceID))
