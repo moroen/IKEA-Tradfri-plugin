@@ -19,6 +19,10 @@ attrTransitionTime = "5712"
 attrPlugControl = "3312"
 attrPlugState = "5850"
 
+# Blinds
+attrBlindControl = "15015"
+attrBlindPosition = "5536"
+
 # Groups
 attr_group_info = "15002"
 attr_group_members = "9018"

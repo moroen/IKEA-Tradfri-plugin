@@ -42,7 +42,7 @@ import Domoticz
 
 try:
     import tradfricoap
-    from tradfricoap import HandshakeError
+    from tradfricoap import HandshakeError, UriNotFoundError
     from tradfri.colors import WhiteOptions, colorOptions
 except ModuleNotFoundError:
     pass
@@ -72,11 +72,13 @@ class BasePlugin:
                     self.updateDevice(aUnit, dev_id[0])
 
                 return [dev.DeviceID for key, dev in Devices.items()]
+
             except HandshakeError:
                 self.hasTimedOut = True
                 return 
             else:
                 self.hasTimedOut = False
+                raise
         else:
             deviceID=[-1]
             return deviceID
@@ -88,6 +90,10 @@ class BasePlugin:
                 self.lights[Unit] = tradfricoap.device(id=device_id)
             else:
                 self.lights[Unit].Update()
+
+            if self.lights[Unit].State is None:
+                # Illegal Device
+                return
 
             if Devices[Unit].SwitchType == 0:
                 # On/off - device
@@ -105,6 +111,11 @@ class BasePlugin:
 
                     Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
 
+            elif Device[Unit].SwitchType == 13:
+                # Blind
+                if self.lights[Unit]
+                Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+
             if (
                 Devices[Unit].DeviceID[-3:] == ":WS"
                 or Devices[Unit].DeviceID[-4:] == ":CWS"
@@ -115,7 +126,7 @@ class BasePlugin:
                 )
 
         except HandshakeError:
-            Domoticz.Error("Error updating device {}: Connection time out".format(device_id))
+            Domoticz.Debug("Error updating device {}: Connection time out".format(device_id))
             self.hasTimedOut = True
             raise
         else:
@@ -169,6 +180,21 @@ class BasePlugin:
                             Subtype=6,
                             DeviceID=devID,
                         ).Create()
+
+                    if aLight.Type == "Blind":
+                        deviceType = 244
+                        subType = 73
+                        switchType = 13
+
+                        Domoticz.Device(
+                            Name=aLight.Name,
+                            Unit=new_unit_id,
+                            Type=deviceType,
+                            Subtype=subType,
+                            Switchtype=switchType,
+                            DeviceID=devID,
+                        ).Create()
+                        self.updateDevice(new_unit_id, devID)
 
                     if aLight.Type == "Light" or aLight.Type == "Group":
                         deviceType = 244
@@ -304,7 +330,11 @@ class BasePlugin:
             if Devices[Unit].DeviceID[-3:] == ":WS":
                 self.lights[Unit].Color_level = Level
             else:
-                self.lights[Unit].Level = int(Level * 2.54)
+                if self.lights[Unit].Type == "Blind":
+                    self.lights[Unit].Level = int(Level)
+                else:
+                    self.lights[Unit].Level = int(Level * 2.54)
+            
 
             if self.lights[Unit].Type == "Group":
                 self.updateDevice(Unit, override_level=Level)

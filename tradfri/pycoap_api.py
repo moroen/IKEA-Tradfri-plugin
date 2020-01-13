@@ -32,7 +32,6 @@ def request(uri, payload=None, method="put"):
             
     else:
         method = POST if method=="post" else PUT
-        print(method, payload)
         return Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,

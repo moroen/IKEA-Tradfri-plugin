@@ -80,7 +80,7 @@ $ python3 tradfricoap.py api coapcmd # Use coapcmd
 ```shell
   $ python3 tradfricoap.py config IP KEY
 ```
-  * IP is the address of the gateway, and KEY is the security-key located on the bottom of the gateway.
+  * IP is the address of the gateway, and KEY is the security-code located on the bottom of the gateway. 
 
 ### 5. Check communication with the gateway:
 ```shell

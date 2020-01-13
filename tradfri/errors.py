@@ -1,0 +1,2 @@
+def IllegalMethodError(Exception):
+    pass

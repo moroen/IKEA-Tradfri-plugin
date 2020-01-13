@@ -8,6 +8,7 @@ import json, logging, time, sys, site, argparse, os
 from tradfri.config import get_config, host_config
 from tradfri import constants
 from tradfri import colors, cli
+from tradfri.errors import IllegalMethodError
 
 site.main()
 
@@ -46,12 +47,15 @@ def set_transition_time(tt):
 class device:
     lightControl = None
     plugControl = None
+    blindControl = None
+
     _id = None
     _is_group = False
     _group_members = []
 
     def __init__(self, id, is_group=False):
         self._id = id
+        self._group_members = []
 
         res = None
 
@@ -65,9 +69,6 @@ class device:
             except HandshakeError:
                 raise
             except UriNotFoundError:
-                pass
-
-            if res == None:
                 self.__init__(id, is_group=True)
 
             try:
@@ -82,13 +83,19 @@ class device:
                 try:
                     self.plugControl = self.device[constants.attrPlugControl][0]
                 except KeyError:
-                    pass
+                    try:
+                        self.blindControl = self.device[constants.attrBlindControl][0]
+                    except KeyError:
+                        pass
         else:
             uri = "{}/{}".format(constants.uri_groups, id)
             try:
                 res = request(uri)
             except HandshakeError:
                 raise
+            except UriNotFoundError:   
+                # Illeagal deviceID
+                self._is_group=False
 
             try:
                 self.device = json.loads(res)
@@ -104,8 +111,8 @@ class device:
     @property
     def Description(self):
         if not self._is_group:
-            return "{}: {} ({} - {})".format(
-                self.DeviceID, self.Name, self.State, self.Hex
+            return "{}: {} ({} - {} - {})".format(
+                self.DeviceID, self.Name, self.State, self.Level, self.Hex
             )
         else:
             return "{}: {}".format(self.DeviceID, self.Name)
@@ -126,6 +133,9 @@ class device:
         if self.plugControl is not None:
             return "Plug"
 
+        if self.blindControl is not None:
+            return "Blind"
+
         if self._is_group:
             return "Group"
 
@@ -145,10 +155,18 @@ class device:
     @State.setter
     def State(self, state):
         if not self._is_group:
-            uri = "{}/{}".format(constants.uriDevices, self._id)
-            payload = '{{ "{0}": [{{ "{1}": {2} }}] }}'.format(
-                constants.attrLightControl, constants.attrLightState, state
-            )
+            if self.lightControl or self.plugControl:
+                uri = "{}/{}".format(constants.uriDevices, self._id)
+                payload = '{{ "{0}": [{{ "{1}": {2} }}] }}'.format(
+                    constants.attrLightControl, constants.attrLightState, state
+                )
+            elif self.blindControl:
+                if state == 0:
+                    self.Level=0
+                else:
+                    self.Level=100
+                return
+
         else:
             uri = "{}/{}".format(constants.uri_groups, self._id)
             payload = '{{ "{0}": {1} }}'.format(constants.attrLightState, state)
@@ -159,6 +177,8 @@ class device:
     def Level(self):
         if self.lightControl:
             return self.lightControl[constants.attrLightDimmer]
+        elif self.blindControl:
+            return self.blindControl[constants.attrBlindPosition]
         elif self._is_group:
             from statistics import mean
 
@@ -193,16 +213,22 @@ class device:
                 state,
             )
         else:
-            uri = "{}/{}".format(constants.uriDevices, self._id)
-            payload = '{{ "{0}": [{{ "{5}": {6}, "{1}": {2}, "{3}": {4} }}] }}'.format(
-                constants.attrLightControl,
-                constants.attrLightDimmer,
-                level,
-                constants.attrTransitionTime,
-                _transition_time,
-                constants.attrLightState,
-                state,
-            )
+            if self.lightControl is not None:
+                uri = "{}/{}".format(constants.uriDevices, self._id)
+                payload = '{{ "{0}": [{{ "{5}": {6}, "{1}": {2}, "{3}": {4} }}] }}'.format(
+                    constants.attrLightControl,
+                    constants.attrLightDimmer,
+                    level,
+                    constants.attrTransitionTime,
+                    _transition_time,
+                    constants.attrLightState,
+                    state,
+                )
+            elif self.blindControl is not None:
+                uri = "{}/{}".format(constants.uriDevices, self._id)
+                payload = '{{ "{0}": [{{ "{1}": {2} }}] }}'.format(
+                    constants.attrBlindControl, constants.attrBlindPosition, level
+                )
 
         request(uri, payload)
         self.Update()
@@ -338,7 +364,7 @@ if __name__ == "__main__":
     args = cli.get_args()
 
     if args.debug:
-        setDebugLevel(1)
+        set_debug_level(1)
 
     if args.command is not None:
 
@@ -348,7 +374,13 @@ if __name__ == "__main__":
                 config.save()
 
         if args.command == "test":
-            # dev = get_device(158578, is_group=True)
+            
+            dev = device(65538)
+
+            dev = device (65560)
+            dev.State = 0
+
+            exit()
 
             try:
                 dev = device(158578)
@@ -376,8 +408,45 @@ if __name__ == "__main__":
             if devices is None:
                 logging.critical("Unable to get list of devices")
             else:
+                lights = []
+                plugs = []
+                blinds = []
+                groups = []
+                others = []
+
                 for dev in devices:
-                    print(dev.Description)
+                    if dev.Type == "Light":
+                        lights.append(dev.Description)
+                    elif dev.Type == "Plug":
+                        plugs.append(dev.Description)
+                    elif dev.Type == "Blind":
+                        blinds.append(dev.Description)
+                    elif dev.Type == "Group":
+                        groups.append(dev.Description)
+                    else:
+                        others.append(dev.Description)
+
+                if len(lights):
+                    print("Lights:")
+                    print("\n".join(lights))
+                    
+                if len(plugs):
+                    print("\nPlugs:")
+                    print("\n".join(plugs))
+                
+                if len(blinds):
+                    print("\nBlinds:")
+                    print("\n".join(blinds))
+                
+                if len(groups):
+                    print("\nGroups:")
+                    print("\n".join(groups))  
+
+                if len(others):
+                    print("\nOthers:")
+                    print("\n".join(others))
+                
+
 
         elif args.command == "config":
             try:
