@@ -111,12 +111,6 @@ class BasePlugin:
 
                     Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
 
-            elif Device[Unit].SwitchType == 13:
-                pass
-                # Blind
-                # if self.lights[Unit]
-                # Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
-
             if (
                 Devices[Unit].DeviceID[-3:] == ":WS"
                 or Devices[Unit].DeviceID[-4:] == ":CWS"
