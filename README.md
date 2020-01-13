@@ -6,11 +6,12 @@ The plugin supports and is able to controll the following devices:
 - Outlets / sockets
 - Floalt LED Panels
 - Tradfri LED-drivers
+- Curtains/Blinds (Kadrilj and Fyrtur)
 
 The plugin doesn't work with:
 - Motion sensors
 - Remotes
-- Curtains (support is planned)
+
 
 ## Requirements:
 1. Python version 3.5.3 or higher, 3.7.x recommended. 
@@ -94,6 +95,9 @@ To observe changes to buld or socket when switched using another method than dom
 
 ### A note about colors
 When using a CWS (color) bulb, a CWS color selector device is created. Due to a known limitation when setting levels in Domoticz scenes, it's only possible to specify the first half of the available colors in a scene. Selecting a color from the last half, gives the color for level 100 (lime) when the scene is activated. A workaround for this is planned, but currently not implemented. 
+
+### Curtains
+Domoticz sets the position of a curtain as a percentage between 0 (fully open) to 100 (fully closed). You need to set the maximum posistion of the curtain before using Domoticz. Please refer to the instructions from IKEA on how to set the maximum position of a curtain. 
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
