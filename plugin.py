@@ -42,12 +42,13 @@ import Domoticz
 
 try:
     import tradfricoap
-    from tradfricoap import HandshakeError, UriNotFoundError
+    from tradfricoap import HandshakeError, UriNotFoundError, ReadTimeoutError, WriteTimeoutError
     from tradfri.colors import WhiteOptions, colorOptions
 except ModuleNotFoundError:
     pass
 
 site.main()
+
 
 class BasePlugin:
     enabled = False
@@ -73,18 +74,18 @@ class BasePlugin:
 
                 return [dev.DeviceID for key, dev in Devices.items()]
 
-            except HandshakeError:
+            except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
                 self.hasTimedOut = True
-                return 
+                return
             else:
                 self.hasTimedOut = False
                 raise
         else:
-            deviceID=[-1]
+            deviceID = [-1]
             return deviceID
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
-        Domoticz.Debug("Updating device {}".format(device_id))
+        # Domoticz.Debug("Updating device {} - Switchtype {}".format(device_id, Devices[Unit].SwitchType))
         try:
             if device_id is not None:
                 self.lights[Unit] = tradfricoap.device(id=device_id)
@@ -97,7 +98,9 @@ class BasePlugin:
 
             if Devices[Unit].SwitchType == 0:
                 # On/off - device
-                if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(self.lights[Unit].Level)): 
+                if (Devices[Unit].nValue != self.lights[Unit].State) or (
+                    Devices[Unit].sValue != str(self.lights[Unit].Level)
+                ):
                     Devices[Unit].Update(
                         nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
                     )
@@ -110,19 +113,23 @@ class BasePlugin:
                     else:
                         level = override_level
 
-                    if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(level)): 
-                        Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+                    if (Devices[Unit].nValue != self.lights[Unit].State) or (
+                        Devices[Unit].sValue != str(level)
+                    ):
+                        Devices[Unit].Update(
+                            nValue=self.lights[Unit].State, sValue=str(level)
+                        )
 
-            if (
-                Devices[Unit].DeviceID[-3:] == ":WS"
-                or Devices[Unit].DeviceID[-4:] == ":CWS"
-            ):
-                Devices[Unit].Update(
-                    nValue=self.lights[Unit].State,
-                    sValue=str(self.lights[Unit].Color_level),
+            elif Devices[Unit].SwitchType == 13:
+                if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(self.lights[Unit].Level)):
+                    Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level)
                 )
 
-        except HandshakeError:
+            if (Devices[Unit].DeviceID[-3:] == ":WS" or Devices[Unit].DeviceID[-4:] == ":CWS"):
+                if (Devices[Unit].nValue != self.lights[Unit].State) or (Devices[Unit].sValue != str(self.lights[Unit].Color_level)):
+                    Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Color_level))
+
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug("Error updating device {}: Connection time out".format(device_id))
             self.hasTimedOut = True
             raise
@@ -133,7 +140,7 @@ class BasePlugin:
         unitIds = self.indexRegisteredDevices()
         if self.hasTimedOut:
             return
-            
+
         ikeaIds = []
 
         # Add unregistred lights
@@ -142,7 +149,7 @@ class BasePlugin:
                 tradfriDevices = tradfricoap.get_devices(groups=True)
             else:
                 tradfriDevices = tradfricoap.get_devices()
-        
+
             if tradfriDevices == None:
                 Domoticz.Log("Failed to get Tradfri-devices")
                 return
@@ -331,7 +338,6 @@ class BasePlugin:
                     self.lights[Unit].Level = int(Level)
                 else:
                     self.lights[Unit].Level = int(Level * 2.54)
-            
 
             if self.lights[Unit].Type == "Group":
                 self.updateDevice(Unit, override_level=Level)

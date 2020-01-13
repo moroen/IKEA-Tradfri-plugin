@@ -2,7 +2,7 @@ import logging
 
 try: 
     from pycoap import setDebugLevel, Request, __version__, POST, PUT, GET
-    from pycoap.errors import HandshakeError, UriNotFoundError
+    from pycoap.errors import HandshakeError, UriNotFoundError, WriteTimeoutError, ReadTimeoutError
 
 except ImportError:
     raise

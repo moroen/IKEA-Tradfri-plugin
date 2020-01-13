@@ -1,4 +1,3 @@
-
 __version__ = "0.7.0"
 
 # Standard library
@@ -28,21 +27,43 @@ if __name__ == "__main__":
 
 if CONF["Api"] == "Pycoap":
     try:
-        from tradfri.pycoap_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
+        from tradfri.pycoap_api import (
+            request,
+            set_debug_level,
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            create_ident,
+        )
     except ImportError:
-        print("Pycoap module not found!\nInstall with \"pip3 install -r requirements.txt\" or select another api with \"python3 tradfricoap.py api\"")
+        print(
+            'Pycoap module not found!\nInstall with "pip3 install -r requirements.txt" or select another api with "python3 tradfricoap.py api"'
+        )
         exit()
 
 if CONF["Api"] == "Coapcmd":
     try:
-        from tradfri.coapcmd_api import request, set_debug_level, HandshakeError, UriNotFoundError, create_ident
+        from tradfri.coapcmd_api import (
+            request,
+            set_debug_level,
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            create_ident,
+        )
     except ImportError:
-        print("coapcmd  not found!\nInstall with \"bash install_coapcmd.sh\" or select another api with \"python3 tradfricoap.py api\"")
+        print(
+            'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 tradfricoap.py api"'
+        )
         exit()
+
 
 def set_transition_time(tt):
     global _transition_time
     _transition_time = int(tt)
+
 
 class device:
     lightControl = None
@@ -93,9 +114,9 @@ class device:
                 res = request(uri)
             except HandshakeError:
                 raise
-            except UriNotFoundError:   
+            except UriNotFoundError:
                 # Illeagal deviceID
-                self._is_group=False
+                self._is_group = False
 
             try:
                 self.device = json.loads(res)
@@ -147,6 +168,14 @@ class device:
             return self.lightControl[constants.attrLightState]
         elif self.plugControl:
             return self.plugControl[constants.attrPlugState]
+        elif self.blindControl:
+            if self.Level == 0:
+                return 0
+            elif self.Level == 100:
+                return 1
+            else:
+                return 2
+
         elif self._is_group:
             return self.device_info[constants.attrLightState]
 
@@ -162,9 +191,9 @@ class device:
                 )
             elif self.blindControl:
                 if state == 0:
-                    self.Level=0
+                    self.Level = 0
                 else:
-                    self.Level=100
+                    self.Level = 100
                 return
 
         else:
@@ -315,7 +344,7 @@ class device:
             if self.device is None:
                 logging.debug("Device {} has no device info".format(self.DeviceID))
                 return None
-                
+
             for id in self.device[constants.attr_group_members][
                 constants.attr_group_info
             ][constants.attrId]:
@@ -369,16 +398,18 @@ if __name__ == "__main__":
     if args.command is not None:
 
         if args.command == "api":
-                config = host_config(CONFIGFILE)
-                config.set_config_item("api", args.API)
-                config.save()
+            config = host_config(CONFIGFILE)
+            config.set_config_item("api", args.API)
+            config.save()
 
         if args.command == "test":
-            
-            dev = device(65538)
 
-            dev = device (65560)
-            dev.State = 0
+            # dev = device(65538)
+
+            dev = device(65560)
+            print(dev.State)
+            dev.Level = 10
+            print(dev.State)
 
             exit()
 
@@ -429,24 +460,22 @@ if __name__ == "__main__":
                 if len(lights):
                     print("Lights:")
                     print("\n".join(lights))
-                    
+
                 if len(plugs):
                     print("\nPlugs:")
                     print("\n".join(plugs))
-                
+
                 if len(blinds):
                     print("\nBlinds:")
                     print("\n".join(blinds))
-                
+
                 if len(groups):
                     print("\nGroups:")
-                    print("\n".join(groups))  
+                    print("\n".join(groups))
 
                 if len(others):
                     print("\nOthers:")
                     print("\n".join(others))
-                
-
 
         elif args.command == "config":
             try:

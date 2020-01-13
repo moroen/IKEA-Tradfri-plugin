@@ -8,6 +8,12 @@ class HandshakeError(Exception):
 class UriNotFoundError(Exception):
     pass
 
+class ReadTimeoutError(Exception):
+    pass
+
+class WriteTimeoutError(Exception):
+    pass
+
 _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 
 if not os.path.exists(_coapCMD):
@@ -35,6 +41,10 @@ def request(uri, payload=None, method="put"):
             raise HandshakeError
         if result["Status"] == "UriNotFound":
             raise UriNotFoundError
+        if result["Status"] == "ReadTimeoutError":
+            raise ReadTimeoutError
+        if result["Status"] == "WriteTimeoutError":
+            raise WriteTimeoutError
         return None
 
     else:
@@ -46,6 +56,10 @@ def request(uri, payload=None, method="put"):
             raise HandshakeError
         if result["Status"] == "UriNotFound":
             raise UriNotFoundError
+        if result["Status"] == "ReadTimeoutError":
+            raise ReadTimeoutError
+        if result["Status"] == "WriteTimeoutError":
+            raise WriteTimeoutError
         return None
 
 def create_ident(ip, key, configFile=None):
@@ -77,4 +91,8 @@ def create_ident(ip, key, configFile=None):
         raise HandshakeError
     if result["Status"] == "UriNotFound":
         raise UriNotFoundError
+    if result["Status"] == "ReadTimeoutError":
+        raise ReadTimeoutError
+    if result["Status"] == "WriteTimeoutError":
+        raise WriteTimeoutError
     return None
