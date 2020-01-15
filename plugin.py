@@ -3,7 +3,7 @@
 # Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.7.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - pycoap version" author="moroen" version="0.7.1" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -262,7 +262,7 @@ class BasePlugin:
                     Devices[aUnit].Delete()
 
         except HandshakeError:
-            Domoticz.Error("Connection to gateway timed out")
+            Domoticz.Debug("Connection to gateway timed out")
             self.hasTimedOut = True
             return
         else:
