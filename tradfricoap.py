@@ -1,4 +1,4 @@
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 # Standard library
 import json, logging, time, sys, site, argparse, os
