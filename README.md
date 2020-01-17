@@ -12,12 +12,15 @@ The plugin doesn't work with:
 - Motion sensors
 - Remotes
 
+## Compatible hardware
+Most systems capable of running domoticz and has a version of python3 available should be able to run the plugin. There are special instructions for:
+- [Raspberry Pi](README-PI.md)
+- [Synology NAS](README-Synology.md)
 
-## Requirements:
+## Sofware requirements:
 1. Python version 3.5.3 or higher, 3.7.x recommended. 
 2. Domoticz compiled with support for Python-Plugins. 
 3. Upgraded pip and setuptools
-   
 
 ## Local Installation
 
