@@ -31,6 +31,7 @@
     </params>
 </plugin>
 """
+import os
 import json
 import site
 import sys
@@ -40,19 +41,27 @@ import datetime
 
 import Domoticz
 
+site.main()
+
+# Need to set config before import from module
+from tradfricoap.config import get_config, host_config
+
+CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+CONF = get_config(CONFIGFILE)
+
+
 try:
-    import tradfricoap
-    from tradfricoap import (
+    from tradfricoap.device import get_device, get_devices, set_transition_time
+    from tradfricoap.errors import (
         HandshakeError,
         UriNotFoundError,
         ReadTimeoutError,
         WriteTimeoutError,
+        set_debug_level,
     )
-    from tradfri.colors import WhiteOptions, colorOptions
+    from tradfricoap.colors import WhiteOptions, colorOptions
 except ModuleNotFoundError:
-    pass
-
-site.main()
+    Domoticz.Error("Unable to find tradfricoap")
 
 
 class BasePlugin:
@@ -65,6 +74,7 @@ class BasePlugin:
 
     hasTimedOut = False
     devicesMoving = []
+    commandQueue = []
 
     def __init__(self):
         # self.var = 123
@@ -95,7 +105,7 @@ class BasePlugin:
         deviceUpdated = False
         try:
             if device_id is not None:
-                self.lights[Unit] = tradfricoap.device(id=device_id)
+                self.lights[Unit] = get_device(id=device_id)
             else:
                 self.lights[Unit].Update()
 
@@ -109,7 +119,8 @@ class BasePlugin:
                     Devices[Unit].sValue != str(self.lights[Unit].Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Level),
                     )
 
             elif Devices[Unit].SwitchType == 7:
@@ -123,32 +134,41 @@ class BasePlugin:
                     if (Devices[Unit].nValue != self.lights[Unit].State) or (
                         Devices[Unit].sValue != str(level)
                     ):
-                        Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+                        Devices[Unit].Update(
+                            nValue=self.lights[Unit].State, sValue=str(level)
+                        )
 
             elif Devices[Unit].SwitchType == 13:
                 if (Devices[Unit].nValue != self.lights[Unit].State) or (
                     Devices[Unit].sValue != str(self.lights[Unit].Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Level),
                     )
                     deviceUpdated = True
 
-            if Devices[Unit].DeviceID[-3:] == ":WS" or Devices[Unit].DeviceID[-4:] == ":CWS":
+            if (
+                Devices[Unit].DeviceID[-3:] == ":WS"
+                or Devices[Unit].DeviceID[-4:] == ":CWS"
+            ):
                 if (Devices[Unit].nValue != self.lights[Unit].State) or (
                     Devices[Unit].sValue != str(self.lights[Unit].Color_level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Color_level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Color_level),
                     )
+            
+            self.hasTimedOut = False
             return deviceUpdated
 
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-            Domoticz.Debug("Error updating device {}: Connection time out".format(device_id))
+            Domoticz.Debug(
+                "Error updating device {}: Connection time out".format(device_id)
+            )
             self.hasTimedOut = True
-            raise
-        else:
-            self.hasTimedOut = False
+            raise            
 
     def registerDevices(self):
         unitIds = self.indexRegisteredDevices()
@@ -160,9 +180,9 @@ class BasePlugin:
         # Add unregistred lights
         try:
             if Parameters["Mode1"] == "True":
-                tradfriDevices = tradfricoap.get_devices(groups=True)
+                tradfriDevices = get_devices(groups=True)
             else:
-                tradfriDevices = tradfricoap.get_devices()
+                tradfriDevices = get_devices()
 
             if tradfriDevices == None:
                 Domoticz.Log("Failed to get Tradfri-devices")
@@ -173,7 +193,9 @@ class BasePlugin:
                 ikeaIds.append(devID)
 
                 if not devID in unitIds:
-                    Domoticz.Debug("Processing: {0} - {1}".format(aLight.Description, aLight.Type))
+                    Domoticz.Debug(
+                        "Processing: {0} - {1}".format(aLight.Description, aLight.Type)
+                    )
                     new_unit_id = firstFree()
 
                     if aLight.Type == "Plug":
@@ -273,33 +295,33 @@ class BasePlugin:
                 if not devID in ikeaIds:
                     Devices[aUnit].Delete()
 
-        except HandshakeError:
+            self.hasTimedOut = False
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug("Connection to gateway timed out")
             self.hasTimedOut = True
-            return
-        else:
-            self.hasTimedOut = False
-
+        
     def onStart(self):
         Domoticz.Debug("onStart called")
 
-        try:
-            if Parameters["Mode6"] == "Debug":
-                Domoticz.Debugging(1)
-                tradfricoap.set_debug_level(1)
+        #try:
+        if Parameters["Mode6"] == "Debug":
+            Domoticz.Debugging(1)
+            set_debug_level(1)
 
-            self.pollInterval = int(Parameters["Mode3"])
-            self.lastPollTime = datetime.datetime.now()
+        self.pollInterval = int(Parameters["Mode3"])
+        self.lastPollTime = datetime.datetime.now()
 
-            tradfricoap.set_transition_time(Parameters["Mode4"])
-            self.registerDevices()
-        except NameError:
-            Domoticz.Error("Failed to initialize tradfri module.")
+        set_transition_time(Parameters["Mode4"])
+        self.registerDevices()
+        #except NameError:
+        #    Domoticz.Error("Failed to initialize tradfri module.")
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
-        Domoticz.Debug("Threads still active: " + str(threading.active_count()) + ", should be 1.")
+        Domoticz.Debug(
+            "Threads still active: " + str(threading.active_count()) + ", should be 1."
+        )
         while threading.active_count() > 1:
             for thread in threading.enumerate():
                 if thread.name != threading.current_thread().name:
@@ -327,37 +349,41 @@ class BasePlugin:
             + "', Level: "
             + str(Level)
         )
-
-        if Command == "On":
-            self.lights[Unit].State = 1
-            self.updateDevice(Unit)
-            if self.lights[Unit].Type == "Blind":
-                self.devicesMoving.append(Unit)
-            return
-
-        if Command == "Off":
-            self.lights[Unit].State = 0
-            self.updateDevice(Unit)
-            if self.lights[Unit].Type == "Blind":
-                self.devicesMoving.append(Unit)
-            return
-
-        if Command == "Set Level":
-            if Devices[Unit].DeviceID[-4:] == ":CWS":
-                self.lights[Unit].Color_level = Level
-            if Devices[Unit].DeviceID[-3:] == ":WS":
-                self.lights[Unit].Color_level = Level
-            else:
-                if self.lights[Unit].Type == "Blind":
-                    self.lights[Unit].Level = int(Level)
-                    self.devicesMoving.append(Unit)
-                else:
-                    self.lights[Unit].Level = int(Level * 2.54)
-
-            if self.lights[Unit].Type == "Group":
-                self.updateDevice(Unit, override_level=Level)
-            else:
+        try:
+            if Command == "On":
+                self.lights[Unit].State = 1
                 self.updateDevice(Unit)
+                if self.lights[Unit].Type == "Blind":
+                    self.devicesMoving.append(Unit)
+                return
+
+            if Command == "Off":
+                self.lights[Unit].State = 0
+                self.updateDevice(Unit)
+                if self.lights[Unit].Type == "Blind":
+                    self.devicesMoving.append(Unit)
+                return
+
+            if Command == "Set Level":
+                if Devices[Unit].DeviceID[-4:] == ":CWS":
+                    self.lights[Unit].Color_level = Level
+                if Devices[Unit].DeviceID[-3:] == ":WS":
+                    self.lights[Unit].Color_level = Level
+                else:
+                    if self.lights[Unit].Type == "Blind":
+                        self.lights[Unit].Level = int(Level)
+                        self.devicesMoving.append(Unit)
+                    else:
+                        self.lights[Unit].Level = int(Level * 2.54)
+
+                if self.lights[Unit].Type == "Group":
+                    self.updateDevice(Unit, override_level=Level)
+                else:
+                    self.updateDevice(Unit)
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+            comObj = {"Unit": Unit, "Command": Command, "Level": Level}
+            Domoticz.Debug("Command timed out. Pushing {} onto commandQueue".format(comObj))
+            self.commandQueue.append(comObj)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
@@ -384,10 +410,16 @@ class BasePlugin:
         # Domoticz.Debug("onHeartbeat called")
 
         for aUnit in self.devicesMoving:
-            Domoticz.Debug("Device {} has moving flag set".format(self.lights[aUnit].DeviceID))
+            Domoticz.Debug(
+                "Device {} has moving flag set".format(self.lights[aUnit].DeviceID)
+            )
             if self.updateDevice(aUnit) is False:
                 self.devicesMoving.remove(aUnit)
 
+        for aCommand in self.commandQueue:
+            Domoticz.Debug("Trying to execute {} from commandQueue".format(aCommand))
+            self.commandQueue.remove(aCommand)
+            self.onCommand(aCommand["Unit"], aCommand["Command"], aCommand["Level"], None)
 
         if self.hasTimedOut:
             Domoticz.Debug("Timeout flag set, retrying...")

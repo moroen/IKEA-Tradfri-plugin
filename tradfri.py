@@ -5,20 +5,19 @@ __version__ = "0.7.1"
 # Standard library
 import json, logging, time, sys, site, argparse, os
 
+# Need to set config before import from module
+from tradfricoap.config import get_config, host_config
+CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+CONF = get_config(CONFIGFILE)
+
 # Module
 from tradfricoap.config import get_config, host_config
 from tradfricoap.device import get_devices
 from tradfricoap import constants
 from tradfricoap import colors, cli
-from tradfricoap.errors import IllegalMethodError
+from tradfricoap.errors import IllegalMethodError, UriNotFoundError, HandshakeError, WriteTimeoutError, ReadTimeoutError
 
 site.main()
-
-_transition_time = 10
-_debug = 0
-
-CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-CONF = get_config(CONFIGFILE)
 
 if __name__ == "__main__":
     args = cli.get_args()
@@ -27,14 +26,6 @@ if __name__ == "__main__":
         config.set_config_item("api", args.API)
         config.save()
         exit()
-
-
-
-def set_transition_time(tt):
-    global _transition_time
-    _transition_time = int(tt)
-
-
 
 
 if __name__ == "__main__":
