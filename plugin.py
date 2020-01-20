@@ -39,16 +39,109 @@ import threading
 import time
 import datetime
 
-import Domoticz
-
+# Get full import PATH
 site.main()
 
+_globalError = None
+
 # Need to set config before import from module
-from tradfricoap.config import get_config, host_config
+try:
+    from tradfricoap.config import get_config, host_config
+    from tradfricoap import ApiNotFoundError
+    CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+    CONF = get_config(CONFIGFILE)
+except ImportError:
+    _globalError="Module 'tradfricoap' not found"
 
-CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-CONF = get_config(CONFIGFILE)
+if __name__ == "__main__":
+    from cli import get_args
+    # from tradfri.config import host_config
 
+    args = get_args()
+    if args.command == "api":
+        config = host_config(CONFIGFILE)
+        config.set_config_item("api", args.API)
+        config.save()
+        exit()
+
+    try:
+        from tradfricoap.device import get_devices
+        from tradfricoap.gateway import create_ident
+    except ImportError:
+        print("Module 'tradfricoap' not found!")
+        exit()
+
+    except ApiNotFoundError as e:
+        if e.api == "pycoap":
+            print('Pycoap module not found!\nInstall with "pip3 install -r requirements.txt" or select another api with "python3 tradfricoap.py api"')
+        elif e.api == "coapcmd":
+            print( 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 tradfricoap.py api"')
+        exit()
+
+    if args.command == "list":
+        try:
+            devices = get_devices(args.groups)
+        except HandshakeError:
+            print("Connection timed out")
+            exit()
+
+        except ApiNotFoundError as e:
+            print(e.message)
+            exit()
+
+        if devices is None:
+            logging.critical("Unable to get list of devices")
+        else:
+            lights = []
+            plugs = []
+            blinds = []
+            groups = []
+            others = []
+
+            for dev in devices:
+                if dev.Type == "Light":
+                    lights.append(dev.Description)
+                elif dev.Type == "Plug":
+                    plugs.append(dev.Description)
+                elif dev.Type == "Blind":
+                    blinds.append(dev.Description)
+                elif dev.Type == "Group":
+                    groups.append(dev.Description)
+                else:
+                    others.append(dev.Description)
+
+            if len(lights):
+                print("Lights:")
+                print("\n".join(lights))
+
+            if len(plugs):
+                print("\nPlugs:")
+                print("\n".join(plugs))
+
+            if len(blinds):
+                print("\nBlinds:")
+                print("\n".join(blinds))
+
+            if len(groups):
+                print("\nGroups:")
+                print("\n".join(groups))
+
+            if len(others):
+                print("\nOthers:")
+                print("\n".join(others))
+
+    elif args.command == "config":
+        try:
+            create_ident(args.IP, args.KEY, CONFIGFILE)
+        except HandshakeError:
+            logging.error("Connection timed out")
+
+
+    exit()
+
+
+## Domoticz Plugin
+import Domoticz
 
 try:
     from tradfricoap.device import get_device, get_devices, set_transition_time
@@ -60,9 +153,12 @@ try:
         set_debug_level,
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
-except ModuleNotFoundError:
-    Domoticz.Error("Unable to find tradfricoap")
-
+except ImportError:
+    _globalError="Unable to find tradfricoap"
+except SystemExit:
+    _globalError="Unable to initialize tradfricoap"
+except ApiNotFoundError:
+    _globalError="Unable to find tradfricoap api"
 
 class BasePlugin:
     enabled = False
@@ -303,18 +399,20 @@ class BasePlugin:
     def onStart(self):
         Domoticz.Debug("onStart called")
 
-        #try:
-        if Parameters["Mode6"] == "Debug":
-            Domoticz.Debugging(1)
-            set_debug_level(1)
+        try:
+            if Parameters["Mode6"] == "Debug":
+                Domoticz.Debugging(1)
+                set_debug_level(1)
 
-        self.pollInterval = int(Parameters["Mode3"])
-        self.lastPollTime = datetime.datetime.now()
+            self.pollInterval = int(Parameters["Mode3"])
+            self.lastPollTime = datetime.datetime.now()
 
-        set_transition_time(Parameters["Mode4"])
-        self.registerDevices()
-        #except NameError:
-        #    Domoticz.Error("Failed to initialize tradfri module.")
+            set_transition_time(Parameters["Mode4"])
+            self.registerDevices()
+        except NameError:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            if _globalError is not None:
+                Domoticz.Error(_globalError)
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")

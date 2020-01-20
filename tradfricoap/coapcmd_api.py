@@ -1,6 +1,7 @@
 import logging, subprocess, os, json
 
 from .config import get_config
+from . import ApiNotFoundError
 
 class HandshakeError(Exception):
     pass
@@ -17,9 +18,7 @@ class WriteTimeoutError(Exception):
 _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 
 if not os.path.exists(_coapCMD):
-    raise ImportError
-
-
+    raise ApiNotFoundError("coapcmd", "'coapcmd' not found")
 
 def set_debug_level(level):
     pass

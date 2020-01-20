@@ -1,11 +1,13 @@
 import logging
 
+from . import ApiNotFoundError
+
 try: 
     from pycoap import setDebugLevel, Request, __version__, POST, PUT, GET
     from pycoap.errors import HandshakeError, UriNotFoundError, WriteTimeoutError, ReadTimeoutError
 
 except ImportError:
-    raise
+    raise ApiNotFoundError("pycoap", "Module 'pycoap' not found")
 
 from .config import get_config
 
