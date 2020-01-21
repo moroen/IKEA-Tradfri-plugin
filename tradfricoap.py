@@ -130,6 +130,10 @@ class device:
         self._group_members = []
 
     @property
+    def Raw(self):
+        return self.device
+
+    @property
     def Description(self):
         if not self._is_group:
             return "{}: {} ({} - {} - {})".format(
@@ -428,6 +432,10 @@ if __name__ == "__main__":
             dev.Level = 250 if dev.Level < 100 else 10
 
             # dev.Color_level = 30 if dev.Color_level == 10 else 10
+
+        if args.command == "raw":
+            dev = get_device(args.ID)
+            print(dev.Raw)
 
         if args.command == "list":
             try:

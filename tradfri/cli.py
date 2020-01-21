@@ -10,6 +10,9 @@ def get_args():
 
     subparsers.add_parser("test")
 
+    parser_raw = subparsers.add_parser("raw")
+    parser_raw.add_argument("ID")
+
     parser_list = subparsers.add_parser("list")
     parser_list.add_argument("--groups", action="store_true")
 
