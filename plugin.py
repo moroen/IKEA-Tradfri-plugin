@@ -31,6 +31,7 @@
     </params>
 </plugin>
 """
+import os
 import json
 import site
 import sys
@@ -38,22 +39,139 @@ import threading
 import time
 import datetime
 
+# Get full import PATH
+site.main()
+
+_globalError = None
+
+# Need to set config before import from module
+try:
+    from tradfricoap.config import get_config, host_config
+    from tradfricoap import ApiNotFoundError
+    
+    CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+    CONF = get_config(CONFIGFILE)
+
+    if CONF["Api"] == "Coapcmd":
+        from tradfricoap.coapcmd_api import set_coapcmd
+        set_coapcmd("{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__))))
+
+except ImportError:
+    _globalError="Module 'tradfricoap' not found"
+
+if __name__ == "__main__":
+    from cli import get_args
+    
+    # from tradfri.config import host_config
+
+    args = get_args()
+    if args.command == "api":
+        config = host_config(CONFIGFILE)
+        config.set_config_item("api", args.API)
+        config.save()
+        exit()
+
+    try:
+        from tradfricoap.device import get_devices, get_device
+        from tradfricoap.gateway import create_ident
+        from tradfricoap.errors import HandshakeError
+        
+    except ImportError:
+        print("Module 'tradfricoap' not found!")
+        exit()
+
+    except ApiNotFoundError as e:
+        if e.api == "pycoap":
+            print('Py3coap module not found!\nInstall with "pip3 install py3coap" or select another api with "python3 plugin.py api"')
+        elif e.api == "coapcmd":
+            print( 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"')
+        exit()
+
+    if args.command == "test":
+        dev = get_device(65550)
+        print(dev.Color_space)
+
+    if args.command == "list":
+        try:
+            devices = get_devices(args.groups)
+        except HandshakeError:
+            print("Connection timed out")
+            exit()
+
+        except ApiNotFoundError as e:
+            print(e.message)
+            exit()
+
+        if devices is None:
+            print("Unable to get list of devices")
+        else:
+            lights = []
+            plugs = []
+            blinds = []
+            groups = []
+            others = []
+
+            for dev in devices:
+                if dev.Type == "Light":
+                    lights.append(dev.Description)
+                elif dev.Type == "Plug":
+                    plugs.append(dev.Description)
+                elif dev.Type == "Blind":
+                    blinds.append(dev.Description)
+                elif dev.Type == "Group":
+                    groups.append(dev.Description)
+                else:
+                    others.append(dev.Description)
+
+            if len(lights):
+                print("Lights:")
+                print("\n".join(lights))
+
+            if len(plugs):
+                print("\nPlugs:")
+                print("\n".join(plugs))
+
+            if len(blinds):
+                print("\nBlinds:")
+                print("\n".join(blinds))
+
+            if len(groups):
+                print("\nGroups:")
+                print("\n".join(groups))
+
+            if len(others):
+                print("\nOthers:")
+                print("\n".join(others))
+
+    elif args.command == "config":
+        try:
+            create_ident(args.IP, args.KEY, CONFIGFILE)
+        except HandshakeError:
+            print("Connection timed out")
+
+
+    exit()
+
+
+## Domoticz Plugin
 import Domoticz
 
 try:
-    import tradfricoap
-    from tradfricoap import (
+    from tradfricoap.device import get_device, get_devices, set_transition_time
+    from tradfricoap.errors import (
         HandshakeError,
         UriNotFoundError,
         ReadTimeoutError,
         WriteTimeoutError,
+        set_debug_level,
     )
-    from tradfri.colors import WhiteOptions, colorOptions
-except ModuleNotFoundError:
-    pass
-
-site.main()
-
+    from tradfricoap.colors import WhiteOptions, colorOptions
+except ImportError:
+    _globalError="Unable to find tradfricoap"
+except SystemExit:
+    _globalError="Unable to initialize tradfricoap"
+except ApiNotFoundError as e:
+    _globalError=e.message
 
 class BasePlugin:
     enabled = False
@@ -65,6 +183,7 @@ class BasePlugin:
 
     hasTimedOut = False
     devicesMoving = []
+    commandQueue = []
 
     def __init__(self):
         # self.var = 123
@@ -95,7 +214,7 @@ class BasePlugin:
         deviceUpdated = False
         try:
             if device_id is not None:
-                self.lights[Unit] = tradfricoap.device(id=device_id)
+                self.lights[Unit] = get_device(id=device_id)
             else:
                 self.lights[Unit].Update()
 
@@ -109,7 +228,8 @@ class BasePlugin:
                     Devices[Unit].sValue != str(self.lights[Unit].Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Level),
                     )
 
             elif Devices[Unit].SwitchType == 7:
@@ -123,32 +243,41 @@ class BasePlugin:
                     if (Devices[Unit].nValue != self.lights[Unit].State) or (
                         Devices[Unit].sValue != str(level)
                     ):
-                        Devices[Unit].Update(nValue=self.lights[Unit].State, sValue=str(level))
+                        Devices[Unit].Update(
+                            nValue=self.lights[Unit].State, sValue=str(level)
+                        )
 
             elif Devices[Unit].SwitchType == 13:
                 if (Devices[Unit].nValue != self.lights[Unit].State) or (
                     Devices[Unit].sValue != str(self.lights[Unit].Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Level),
                     )
                     deviceUpdated = True
 
-            if Devices[Unit].DeviceID[-3:] == ":WS" or Devices[Unit].DeviceID[-4:] == ":CWS":
+            if (
+                Devices[Unit].DeviceID[-3:] == ":WS"
+                or Devices[Unit].DeviceID[-4:] == ":CWS"
+            ):
                 if (Devices[Unit].nValue != self.lights[Unit].State) or (
                     Devices[Unit].sValue != str(self.lights[Unit].Color_level)
                 ):
                     Devices[Unit].Update(
-                        nValue=self.lights[Unit].State, sValue=str(self.lights[Unit].Color_level),
+                        nValue=self.lights[Unit].State,
+                        sValue=str(self.lights[Unit].Color_level),
                     )
+            
+            self.hasTimedOut = False
             return deviceUpdated
 
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-            Domoticz.Debug("Error updating device {}: Connection time out".format(device_id))
+            Domoticz.Debug(
+                "Error updating device {}: Connection time out".format(device_id)
+            )
             self.hasTimedOut = True
-            raise
-        else:
-            self.hasTimedOut = False
+            raise            
 
     def registerDevices(self):
         unitIds = self.indexRegisteredDevices()
@@ -160,9 +289,9 @@ class BasePlugin:
         # Add unregistred lights
         try:
             if Parameters["Mode1"] == "True":
-                tradfriDevices = tradfricoap.get_devices(groups=True)
+                tradfriDevices = get_devices(groups=True)
             else:
-                tradfriDevices = tradfricoap.get_devices()
+                tradfriDevices = get_devices()
 
             if tradfriDevices == None:
                 Domoticz.Log("Failed to get Tradfri-devices")
@@ -173,7 +302,9 @@ class BasePlugin:
                 ikeaIds.append(devID)
 
                 if not devID in unitIds:
-                    Domoticz.Debug("Processing: {0} - {1}".format(aLight.Description, aLight.Type))
+                    Domoticz.Debug(
+                        "Processing: {0} - {1}".format(aLight.Description, aLight.Type)
+                    )
                     new_unit_id = firstFree()
 
                     if aLight.Type == "Plug":
@@ -273,33 +404,41 @@ class BasePlugin:
                 if not devID in ikeaIds:
                     Devices[aUnit].Delete()
 
-        except HandshakeError:
+            self.hasTimedOut = False
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug("Connection to gateway timed out")
             self.hasTimedOut = True
-            return
-        else:
-            self.hasTimedOut = False
-
+        
     def onStart(self):
         Domoticz.Debug("onStart called")
 
+        if _globalError is not None:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(_globalError)
+            return
+            
         try:
             if Parameters["Mode6"] == "Debug":
                 Domoticz.Debugging(1)
-                tradfricoap.set_debug_level(1)
+                set_debug_level(1)
 
             self.pollInterval = int(Parameters["Mode3"])
             self.lastPollTime = datetime.datetime.now()
 
-            tradfricoap.set_transition_time(Parameters["Mode4"])
+            set_transition_time(Parameters["Mode4"])
             self.registerDevices()
         except NameError:
             Domoticz.Error("Failed to initialize tradfri module.")
-
+        except ApiNotFoundError as e:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(e.message)
+        
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
-        Domoticz.Debug("Threads still active: " + str(threading.active_count()) + ", should be 1.")
+        Domoticz.Debug(
+            "Threads still active: " + str(threading.active_count()) + ", should be 1."
+        )
         while threading.active_count() > 1:
             for thread in threading.enumerate():
                 if thread.name != threading.current_thread().name:
@@ -327,37 +466,41 @@ class BasePlugin:
             + "', Level: "
             + str(Level)
         )
-
-        if Command == "On":
-            self.lights[Unit].State = 1
-            self.updateDevice(Unit)
-            if self.lights[Unit].Type == "Blind":
-                self.devicesMoving.append(Unit)
-            return
-
-        if Command == "Off":
-            self.lights[Unit].State = 0
-            self.updateDevice(Unit)
-            if self.lights[Unit].Type == "Blind":
-                self.devicesMoving.append(Unit)
-            return
-
-        if Command == "Set Level":
-            if Devices[Unit].DeviceID[-4:] == ":CWS":
-                self.lights[Unit].Color_level = Level
-            if Devices[Unit].DeviceID[-3:] == ":WS":
-                self.lights[Unit].Color_level = Level
-            else:
-                if self.lights[Unit].Type == "Blind":
-                    self.lights[Unit].Level = int(Level)
-                    self.devicesMoving.append(Unit)
-                else:
-                    self.lights[Unit].Level = int(Level * 2.54)
-
-            if self.lights[Unit].Type == "Group":
-                self.updateDevice(Unit, override_level=Level)
-            else:
+        try:
+            if Command == "On":
+                self.lights[Unit].State = 1
                 self.updateDevice(Unit)
+                if self.lights[Unit].Type == "Blind":
+                    self.devicesMoving.append(Unit)
+                return
+
+            if Command == "Off":
+                self.lights[Unit].State = 0
+                self.updateDevice(Unit)
+                if self.lights[Unit].Type == "Blind":
+                    self.devicesMoving.append(Unit)
+                return
+
+            if Command == "Set Level":
+                if Devices[Unit].DeviceID[-4:] == ":CWS":
+                    self.lights[Unit].Color_level = Level
+                if Devices[Unit].DeviceID[-3:] == ":WS":
+                    self.lights[Unit].Color_level = Level
+                else:
+                    if self.lights[Unit].Type == "Blind":
+                        self.lights[Unit].Level = int(Level)
+                        self.devicesMoving.append(Unit)
+                    else:
+                        self.lights[Unit].Level = int(Level * 2.54)
+
+                if self.lights[Unit].Type == "Group":
+                    self.updateDevice(Unit, override_level=Level)
+                else:
+                    self.updateDevice(Unit)
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+            comObj = {"Unit": Unit, "Command": Command, "Level": Level}
+            Domoticz.Debug("Command timed out. Pushing {} onto commandQueue".format(comObj))
+            self.commandQueue.append(comObj)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
@@ -384,10 +527,16 @@ class BasePlugin:
         # Domoticz.Debug("onHeartbeat called")
 
         for aUnit in self.devicesMoving:
-            Domoticz.Debug("Device {} has moving flag set".format(self.lights[aUnit].DeviceID))
+            Domoticz.Debug(
+                "Device {} has moving flag set".format(self.lights[aUnit].DeviceID)
+            )
             if self.updateDevice(aUnit) is False:
                 self.devicesMoving.remove(aUnit)
 
+        for aCommand in self.commandQueue:
+            Domoticz.Debug("Trying to execute {} from commandQueue".format(aCommand))
+            self.commandQueue.remove(aCommand)
+            self.onCommand(aCommand["Unit"], aCommand["Command"], aCommand["Level"], None)
 
         if self.hasTimedOut:
             Domoticz.Debug("Timeout flag set, retrying...")

@@ -1,17 +1,11 @@
 import argparse
 
-
 def get_args():
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
 
     parser.add_argument("--debug", action="store_true")
-
-    subparsers.add_parser("test")
-
-    parser_raw = subparsers.add_parser("raw")
-    parser_raw.add_argument("ID")
 
     parser_list = subparsers.add_parser("list")
     parser_list.add_argument("--groups", action="store_true")
@@ -23,4 +17,6 @@ def get_args():
     parser_config_api = subparsers.add_parser("api")
     parser_config_api.add_argument("API", choices=["pycoap", "coapcmd"])
     
+    subparsers.add_parser("test")
+
     return parser.parse_args()

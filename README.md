@@ -34,20 +34,25 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 
 ### 2. Update pip and setuptools:
 ```shell
-  $ pip3 install --upgrade pip
-  $ pip3 install --upgrade setuptools
+  $ pip3 install -U pip
+  $ pip3 install -U setuptools
 ```
 
-### 3. Installing API for coap requests
+### 3. Install tradfricoap
+```shell
+  $ pip3 install -U tradfricoap
+```
+
+### 4. Installing an API for coap requests
 The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
 
 On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For instruction on how to install coapcmd on systems without systems without a working GO compiler, please refer to the repository for coapcmd. 
 
-#### 3a Pycoap (recommended)
-Pycoap is available as precompiled wheels for linux (amd64), Windows (amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
+#### 4a Pycoap (recommended)
+Py3coap is available as precompiled wheels for linux (amd64), Windows (amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
 
 ```shell
-  $ pip3 install -r requirements.txt
+  $ pip3 install py3coap
 ```
 
 ##### Alternative installation of pycoap
@@ -59,7 +64,7 @@ $ cd pycoap
 $ sudo -H python3 setup.py install
 ```
 
-#### 3b coapcmd (alternative)
+#### 4b coapcmd (alternative)
 The coapcmd command must be installed as IKEA-Tradfri/bin/coapcmd and the plugin configured to use coapcmd for COAP-requests. On systems with git and go installed, coapcmd can be installed with the provided install-script:
 
 ```shell
@@ -68,30 +73,30 @@ $ bash install_coapcmd.sh
 
 Configure the plugin to use coapcmd:
 ```shell
-$ python3 tradfricoap.py api coapcmd
+$ python3 plugin.py api coapcmd
 ```
 
 For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options.
 
 #### Switching between transports:
 ```shell
-$ python3 tradfricoap.py api pycoap # Use pycoap module
-$ python3 tradfricoap.py api coapcmd # Use coapcmd
+$ python3 plugin.py api pycoap # Use pycoap module
+$ python3 plugin.py api coapcmd # Use coapcmd
 ```
 
 
-### 4. Configure Tradfri COAP: 
+### 5. Configure Tradfri COAP: 
 ```shell
-  $ python3 tradfricoap.py config IP KEY
+  $ python3 plugin.py config IP KEY
 ```
   * IP is the address of the gateway, and KEY is the security-code located on the bottom of the gateway. 
 
-### 5. Check communication with the gateway:
+### 6. Check communication with the gateway:
 ```shell
-  $ python3 tradfricoap.py list
+  $ python3 plugin.py list
 ```
 
-### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
+### 7. Restart domoticz and enable IKEA-Tradfri from the hardware page
 
 ### Observing changes
 To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 10 seconds, and the intervall should be a multiple of 10 seconds. Using a too short interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
