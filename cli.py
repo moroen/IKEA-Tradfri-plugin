@@ -17,4 +17,6 @@ def get_args():
     parser_config_api = subparsers.add_parser("api")
     parser_config_api.add_argument("API", choices=["pycoap", "coapcmd"])
     
+    subparsers.add_parser("test")
+
     return parser.parse_args()

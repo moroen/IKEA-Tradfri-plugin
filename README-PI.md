@@ -29,20 +29,26 @@ $ sudo -H pip3 install --upgrade setuptools
 
 ### 5. Install other requirements:
 ```shell
-$ sudo -H pip3 install -r requirements.txt
+$ sudo -H pip3 install -U tradfricoap
 ```
 
-### 6. Configure and test connection:
+### 6. Install py3coap:
+```shell
+$ sudo -H pip3 install -U py3coap
+```
+
+
+### 7. Configure and test connection:
 ```shell
 $ cd iKEA-Tradfri
-$ python3 tradfricoap.py config IP KEY
-$ python3 tradfricoap.py list
+$ python3 plugin.py config IP KEY
+$ python3 plugin.py list
 ```
-### 7. Refer to the main [readme](README.md) for domoticz setup and usage
+### 8. Refer to the main [readme](README.md) for domoticz setup and usage
 
 
-## Alternative installation of pycoap
-On some systems, installing pycoap using pip fails. Installing pycoap manually might help, or at least give some more information on why installation fails.
+## Alternative installation of py3coap
+On some systems, installing py3coap using pip fails. Installing py3coap manually might help, or at least give some more information on why installation fails.
 
 ```shell
 $ git clone https://github.com/moroen/pycoap.git

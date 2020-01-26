@@ -48,13 +48,20 @@ _globalError = None
 try:
     from tradfricoap.config import get_config, host_config
     from tradfricoap import ApiNotFoundError
+    
     CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
     CONF = get_config(CONFIGFILE)
+
+    if CONF["Api"] == "Coapcmd":
+        from tradfricoap.coapcmd_api import set_coapcmd
+        set_coapcmd("{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__))))
+
 except ImportError:
     _globalError="Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
     from cli import get_args
+    
     # from tradfri.config import host_config
 
     args = get_args()
@@ -65,18 +72,24 @@ if __name__ == "__main__":
         exit()
 
     try:
-        from tradfricoap.device import get_devices
+        from tradfricoap.device import get_devices, get_device
         from tradfricoap.gateway import create_ident
+        from tradfricoap.errors import HandshakeError
+        
     except ImportError:
         print("Module 'tradfricoap' not found!")
         exit()
 
     except ApiNotFoundError as e:
         if e.api == "pycoap":
-            print('Pycoap module not found!\nInstall with "pip3 install -r requirements.txt" or select another api with "python3 tradfricoap.py api"')
+            print('Py3coap module not found!\nInstall with "pip3 install py3coap" or select another api with "python3 plugin.py api"')
         elif e.api == "coapcmd":
-            print( 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 tradfricoap.py api"')
+            print( 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"')
         exit()
+
+    if args.command == "test":
+        dev = get_device(65550)
+        print(dev.Color_space)
 
     if args.command == "list":
         try:
@@ -90,7 +103,7 @@ if __name__ == "__main__":
             exit()
 
         if devices is None:
-            logging.critical("Unable to get list of devices")
+            print("Unable to get list of devices")
         else:
             lights = []
             plugs = []
@@ -134,7 +147,7 @@ if __name__ == "__main__":
         try:
             create_ident(args.IP, args.KEY, CONFIGFILE)
         except HandshakeError:
-            logging.error("Connection timed out")
+            print("Connection timed out")
 
 
     exit()
@@ -157,8 +170,8 @@ except ImportError:
     _globalError="Unable to find tradfricoap"
 except SystemExit:
     _globalError="Unable to initialize tradfricoap"
-except ApiNotFoundError:
-    _globalError="Unable to find tradfricoap api"
+except ApiNotFoundError as e:
+    _globalError=e.message
 
 class BasePlugin:
     enabled = False
@@ -399,6 +412,11 @@ class BasePlugin:
     def onStart(self):
         Domoticz.Debug("onStart called")
 
+        if _globalError is not None:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(_globalError)
+            return
+            
         try:
             if Parameters["Mode6"] == "Debug":
                 Domoticz.Debugging(1)
@@ -411,9 +429,10 @@ class BasePlugin:
             self.registerDevices()
         except NameError:
             Domoticz.Error("Failed to initialize tradfri module.")
-            if _globalError is not None:
-                Domoticz.Error(_globalError)
-
+        except ApiNotFoundError as e:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(e.message)
+        
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
