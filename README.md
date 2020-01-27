@@ -38,17 +38,12 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
   $ pip3 install -U setuptools
 ```
 
-### 3. Install tradfricoap
-```shell
-  $ pip3 install -U tradfricoap
-```
-
-### 4. Installing an API for coap requests
+### 3. Installing an API for coap requests
 The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
 
 On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For instruction on how to install coapcmd on systems without systems without a working GO compiler, please refer to the repository for coapcmd. 
 
-#### 4a Pycoap (recommended)
+#### 3a Pycoap (recommended)
 Py3coap is available as precompiled wheels for linux (amd64), Windows (amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
 
 ```shell
@@ -64,7 +59,7 @@ $ cd pycoap
 $ sudo -H python3 setup.py install
 ```
 
-#### 4b coapcmd (alternative)
+#### 3b coapcmd (alternative)
 The coapcmd command must be installed as IKEA-Tradfri/bin/coapcmd and the plugin configured to use coapcmd for COAP-requests. On systems with git and go installed, coapcmd can be installed with the provided install-script:
 
 ```shell
@@ -85,13 +80,13 @@ $ python3 plugin.py api coapcmd # Use coapcmd
 ```
 
 
-### 5. Configure Tradfri COAP: 
+### 4. Configure Tradfri COAP: 
 ```shell
   $ python3 plugin.py config IP KEY
 ```
   * IP is the address of the gateway, and KEY is the security-code located on the bottom of the gateway. 
 
-### 6. Check communication with the gateway:
+### 5. Check communication with the gateway:
 ```shell
   $ python3 plugin.py list
 ```
