@@ -87,10 +87,10 @@ if __name__ == "__main__":
             print( 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"')
         exit()
 
-    if args.command == "test":
-        dev = get_device(65550)
-        print(dev.Color_space)
-
+    if args.command == "raw":
+        dev = get_device(args.ID)
+        print(dev.Raw)
+        
     if args.command == "list":
         try:
             devices = get_devices(args.groups)

@@ -109,6 +109,10 @@ class device:
         return None
 
     @property
+    def Raw(self):
+        return self.device
+
+    @property
     def State(self):
         if self.lightControl:
             return self.lightControl[constants.attrLightState]
