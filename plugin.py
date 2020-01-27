@@ -3,7 +3,7 @@
 # Author: Moroen
 #
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.8.0" author="moroen" version="0.8.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.8.1" author="moroen" version="0.8.1" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.google.com/">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
