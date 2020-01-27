@@ -1,2 +1,1 @@
-py3coap>=0.7.1
-tradfricoap
+py3coap>=0.7.2
