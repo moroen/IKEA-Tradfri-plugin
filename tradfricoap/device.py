@@ -210,7 +210,7 @@ class device:
 
     @property
     def Color_space(self):
-        from tradfricoap.device_info import deviceInfo
+        from .device_info import deviceInfo
 
         if self._is_group:
             color_spaces = []
