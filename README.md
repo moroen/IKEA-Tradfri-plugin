@@ -41,10 +41,10 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 ### 3. Installing an API for coap requests
 The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
 
-On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For instruction on how to install coapcmd on systems without systems without a working GO compiler, please refer to the repository for coapcmd. 
+On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For systems without a working go compiler, prebuild binaries are available in the repository on github.com. 
 
 #### 3a Pycoap (recommended)
-Py3coap is available as precompiled wheels for linux (amd64), Windows (amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
+Py3coap is available as precompiled wheels for linux (amd64), Windows (win32 and amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
 
 ```shell
   $ pip3 install py3coap
@@ -71,7 +71,7 @@ Configure the plugin to use coapcmd:
 $ python3 plugin.py api coapcmd
 ```
 
-For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options.
+For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options and prebuilt binaries for common systems. 
 
 #### Switching between transports:
 ```shell
