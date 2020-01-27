@@ -27,18 +27,13 @@ $ sudo -H pip3 install --upgrade pip
 $ sudo -H pip3 install --upgrade setuptools
 ```
 
-### 5. Install other requirements:
-```shell
-$ sudo -H pip3 install -U tradfricoap
-```
-
-### 6. Install py3coap:
+### 5. Install py3coap:
 ```shell
 $ sudo -H pip3 install -U py3coap
 ```
 
 
-### 7. Configure and test connection:
+### 6. Configure and test connection:
 ```shell
 $ cd iKEA-Tradfri
 $ python3 plugin.py config IP KEY
