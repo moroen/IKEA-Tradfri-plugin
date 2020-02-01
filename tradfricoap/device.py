@@ -2,7 +2,7 @@ import json
 from . import constants
 from . import colors
 from .request import request
-from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTimeoutError
+from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTimeoutError, DeviceNotFoundError
 
 
 _transition_time = 10
@@ -63,6 +63,7 @@ class device:
             except UriNotFoundError:
                 # Illeagal deviceID
                 self._is_group = False
+                raise DeviceNotFoundError(id)
 
             try:
                 self.device = json.loads(res)
@@ -306,6 +307,14 @@ class device:
 
         return self._group_members
 
+    @property
+    def Battery_level(self):
+        if self.device_info is not None:
+            if constants.attrBatteryLevel in self.device_info:
+                return self.device_info[constants.attrBatteryLevel]
+                
+
+        return None
 
 def get_device(id, is_group=False):
     dev = device(id, is_group)
