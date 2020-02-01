@@ -28,3 +28,7 @@ if CONF["Api"] == "Coapcmd":
         )
     except ImportError:
         raise 
+
+class DeviceNotFoundError(Exception):
+    def __init__(self, deviceid):
+        self.DeviceID = deviceid

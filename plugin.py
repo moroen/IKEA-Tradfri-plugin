@@ -173,6 +173,7 @@ try:
         ReadTimeoutError,
         WriteTimeoutError,
         set_debug_level,
+        DeviceNotFoundError
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
 except ImportError:
@@ -236,7 +237,7 @@ class BasePlugin:
             return deviceID
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
-        # Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
+        Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
         deviceUpdated = False
         try:
             if device_id is not None:
@@ -319,7 +320,10 @@ class BasePlugin:
             
             self.hasTimedOut = False
             return deviceUpdated
-
+        except DeviceNotFoundError as e:
+            Domoticz.Error("Device {} not found on gateway!".format(e.DeviceID))
+            return
+            
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug(
                 "Error updating device {}: Connection time out".format(device_id)

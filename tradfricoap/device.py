@@ -2,7 +2,7 @@ import json
 from . import constants
 from . import colors
 from .request import request
-from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTimeoutError
+from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTimeoutError, DeviceNotFoundError
 
 
 _transition_time = 10
@@ -63,6 +63,7 @@ class device:
             except UriNotFoundError:
                 # Illeagal deviceID
                 self._is_group = False
+                raise DeviceNotFoundError(id)
 
             try:
                 self.device = json.loads(res)
