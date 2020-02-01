@@ -2,6 +2,11 @@
 #
 # Author: Moroen
 #
+
+#
+# Battery-icons from wpclipart.com (PD), prepared for Domoticz by Logread (https://www.domoticz.com/forum/memberlist.php?mode=viewprofile&u=11209)
+#
+
 """
 <plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.0" author="moroen" version="0.9.0" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
