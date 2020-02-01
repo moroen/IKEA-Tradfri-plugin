@@ -71,7 +71,7 @@ Configure the plugin to use coapcmd:
 $ python3 plugin.py api coapcmd
 ```
 
-For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options and prebuilt binaries for common systems. 
+For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options and prebuilt binaries for common systems. To use a prebuild binary, download the correct file from https://github.com/moroen/coapcmd/releases, rename it to coapcmd (coapcmd.exe on windows) and place it in the bin directory of the plugin (domoticz/plugins/IKEA-Tradfri/bin).
 
 #### Switching between transports:
 ```shell
