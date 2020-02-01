@@ -7,6 +7,7 @@ attrName = "9001"
 attrId = "9003"
 attrDeviceInfo = "3"
 attrDeviceInfo_Model = "1"
+attrBatteryLevel = "9"
 
 # Lights
 attrLightControl = "3311"
