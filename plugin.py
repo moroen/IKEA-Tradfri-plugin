@@ -26,7 +26,12 @@
             </options>
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
-        <param field="Mode5" label="Battery check interval (seconds)" width="75px" required="true" default="3600"/>
+        <param field="Mode5" label="Montior batteries" width="75px">
+            <options>
+                <option label="Yes" value="True"/>
+                <option label="No" value="False"  default="true" />
+            </options>
+        </param>
         <param field="Mode4" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
         <param field="Mode6" label="Debug" width="75px">
             <options>
@@ -196,13 +201,12 @@ class BasePlugin:
 
     includeGroups = False
     observeChanges = False
+    monitorBatteries = False
 
     lastPollTime = None
     pollInterval = None
 
-    lastBatteryPollTime = None
-    batteryPollInterval = None
-
+    
     hasTimedOut = False
     devicesMoving = []
     commandQueue = []
@@ -242,7 +246,7 @@ class BasePlugin:
             return deviceID
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
-        Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
+        # Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
         deviceUpdated = False
         try:
             if device_id is not None:
@@ -307,7 +311,7 @@ class BasePlugin:
                                 sValue=str(self.lights[Unit].Color_level),
                             )
 
-            elif Devices[Unit].Type == 243:
+            elif Devices[Unit].Type == 243 and self.monitorBatteries:
                 if Devices[Unit].SubType == 31:
                     # Custom sensor
                     if self.lights[Unit].Battery_level >= 75:
@@ -319,7 +323,6 @@ class BasePlugin:
                     else:
                         image = "IKEA-Tradfri_batterylevelempty"
 
-                    # Domoticz.Debug("Updating Custom sensor ID {} - battery: {}".format(self.lights[Unit].DeviceID, self.lights[Unit].Battery_level))
                     Devices[Unit].Update(nValue=0, sValue=str(self.lights[Unit].Battery_level), Image=Images[image].ID)
 
             
@@ -417,15 +420,16 @@ class BasePlugin:
                         if aLight.Color_space == "W":
                             continue
 
-                if aLight.Battery_level is not None and devID+":Battery" not in unitIds:
-                    new_unit_id = firstFree()
-                    Domoticz.Debug("Registering: {0}:Battery".format(aLight.DeviceID))
-                    Domoticz.Device(Name=aLight.Name + " - Battery",
-                                    Unit=new_unit_id, 
-                                    TypeName="Custom",
-                                    Options={"Custom": "1;%"},
-                                    DeviceID=devID + ":Battery").Create()
-                    self.updateDevice(new_unit_id, devID)
+                if self.monitorBatteries:
+                    if aLight.Battery_level is not None and devID+":Battery" not in unitIds:
+                        new_unit_id = firstFree()
+                        Domoticz.Debug("Registering: {0}:Battery".format(aLight.DeviceID))
+                        Domoticz.Device(Name=aLight.Name + " - Battery",
+                                        Unit=new_unit_id, 
+                                        TypeName="Custom",
+                                        Options={"Custom": "1;%"},
+                                        DeviceID=devID + ":Battery").Create()
+                        self.updateDevice(new_unit_id, devID)
 
                 if aLight.Color_space == "CWS" and devID + ":CWS" not in unitIds:
                     new_unit_id = firstFree()
@@ -454,14 +458,19 @@ class BasePlugin:
                     self.updateDevice(new_unit_id, devID)
 
             # Remove registered lights no longer found on the gateway
-
+        
             for aUnit in list(Devices.keys()):
-                devID = str(Devices[aUnit].DeviceID).split(":")[0]
-                        
-                if not devID in ikeaIds:
+                devID= str(Devices[aUnit].DeviceID).split(":")
+                                        
+                if not devID[0] in ikeaIds:
                     Devices[aUnit].Delete()
 
+                if not self.monitorBatteries and len(devID)==2:
+                    if devID[1] == "Battery":
+                        Devices[aUnit].Delete()
+
             self.hasTimedOut = False
+
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug("Connection to gateway timed out")
             self.hasTimedOut = True
@@ -483,6 +492,7 @@ class BasePlugin:
         try:
             if Parameters["Mode2"] == "True":
                 self.observeChanges = True
+                self.lastPollTime = datetime.datetime.now()
         except ValueError:
             Domoticz.Error("Illegal value for 'Observe changes'. Using default (No)")
 
@@ -492,15 +502,13 @@ class BasePlugin:
             Domoticz.Error("Illegal value for 'Polling interval'. Using default (300)")
             self.pollInterval = 300
 
-        try:
-            self.batteryPollInterval = int(Parameters["Mode5"])
-        except ValueError:
-            Domoticz.Error("Illegal value for 'Battery polling interval'. Using default (3600)")
-            self.batteryPollInterval = 3600
-
-
-        self.lastBatteryPollTime = datetime.datetime.now()
-        self.lastPollTime = datetime.datetime.now()
+        if Parameters["Mode5"] == "True":
+            self.monitorBatteries = True
+        elif Parameters["Mode5"] == "False":
+            self.monitorBatteries = False
+        else:
+            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (No)")
+            self.monitorBatteries = False
 
         try:
             if Parameters["Mode6"] == "Debug":
@@ -642,15 +650,9 @@ class BasePlugin:
             self.hasTimedOut = False
             self.registerDevices()
         else:
-            interval = (datetime.datetime.now() - self.lastBatteryPollTime).seconds
-            if interval + 1 > self.batteryPollInterval:
-                Domoticz.Debug("Updating batteries status")
-                for aUnit in self.batteries:
-                    self.updateDevice(aUnit)
-
             if self.observeChanges:
                 if self.lastPollTime is None:
-                    Domoticz.Error("Plugin not intialized!")
+                    self.lastPollTime = datetime.datetime.now()
                 else:
                     interval = (datetime.datetime.now() - self.lastPollTime).seconds
                     if interval + 1 > self.pollInterval:
