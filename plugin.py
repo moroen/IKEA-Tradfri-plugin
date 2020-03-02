@@ -102,6 +102,13 @@ if __name__ == "__main__":
         dev = get_device(args.ID)
         print(dev.Raw)
 
+    if args.command == "observe":
+        from tradfricoap.observe import startObserve, stopObserve
+        print("observe")
+        startObserve()
+        time.sleep(10)
+        stopObserve()
+
     if args.command == "list":
         try:
             devices = get_devices(args.groups)
@@ -186,6 +193,8 @@ try:
         DeviceNotFoundError
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
+    from tradfricoap.observe import startObserve, stopObserve
+
 except ImportError:
     _globalError="Unable to find tradfricoap"
 except SystemExit:
@@ -539,9 +548,13 @@ class BasePlugin:
         except ApiNotFoundError as e:
             Domoticz.Error("Failed to initialize tradfri module.")
             Domoticz.Error(e.message)
+
+        startObserve()
         
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
+
+        stopObserve()
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."

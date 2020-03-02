@@ -20,4 +20,6 @@ def get_args():
     parser_raw = subparsers.add_parser("raw")
     parser_raw.add_argument("ID")
 
+    parser_observe = subparsers.add_parser("observe")
+
     return parser.parse_args()
