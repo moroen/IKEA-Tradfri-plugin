@@ -55,6 +55,8 @@ site.main()
 
 _globalError = None
 
+_version = "0.9.1"
+
 # Need to set config before import from module
 try:
     from tradfricoap.config import get_config, host_config
@@ -101,6 +103,9 @@ if __name__ == "__main__":
     if args.command == "raw":
         dev = get_device(args.ID)
         print(dev.Raw)
+
+    if args.command == "version":
+        print("IKEA Tradfri Plugin - version {}".format(_version))
 
     if args.command == "list":
         try:

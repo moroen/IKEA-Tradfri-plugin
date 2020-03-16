@@ -1,5 +1,6 @@
 # A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
+
 ## What's supported
 The plugin supports and is able to controll the following devices:
 - All bulbs, with dimming for bulbs that are dimmable and setting white temperature/color for CW and CWS bulbs.
@@ -104,3 +105,22 @@ Domoticz sets the position of a curtain as a percentage between 0 (fully open) t
 
 ## Usage
 Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app. 
+
+## Check installed version
+To find the current version of the plugin:
+```shell
+  $ cd domoticz/Plugins/IKEA-Tradfri
+  $ python3 plugin.py version
+```
+
+## Updating plugin
+To update the plugin to the newest version, stop domoticz, enter the plugin directory, pull the latest changes from git and restart domoticz:
+```shell
+  $ cd domoticz/Plugins/IKEA-Tradfri
+  $ git pull
+```
+
+It's usually recommended to upgrade to the latest version of py3coap as well:
+```shell
+  $ sudo -H pip3 install -U py3coap
+```
