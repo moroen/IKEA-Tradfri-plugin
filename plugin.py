@@ -19,10 +19,11 @@
                 <option label="No" value="False"  default="true" />
             </options>
         </param>
-        <param field="Mode2" label="Observe changes" width="75px">
+        <param field="Mode2" label="Monitor changes" width="75px">
             <options>
-                <option label="Yes" value="True"/>
                 <option label="No" value="False"  default="true" />
+                <option label="Poll" value="poll"/>
+                <option label="Observe" value="observe"/>
             </options>
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
@@ -110,13 +111,13 @@ if __name__ == "__main__":
         dev = get_device(args.ID)
         print(dev.Raw)
 
-    if args.command == "observe":
-        from tradfricoap.observe import startObserve, stopObserve
+    # if args.command == "observe":
+    #     from tradfricoap.observe import startObserve, stopObserve
 
-        print("observe")
-        startObserve()
-        time.sleep(10)
-        stopObserve()
+    #     print("observe")
+    #     startObserve()
+    #     time.sleep(10)
+    #     stopObserve()
 
     if args.command == "list":
         try:
@@ -203,7 +204,6 @@ try:
         DeviceNotFoundError,
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
-    from tradfricoap.observe import startObserve, stopObserve
 
 except ImportError:
     _globalError = "Unable to find tradfricoap"
@@ -220,7 +220,7 @@ class BasePlugin:
     batteries = []
 
     includeGroups = False
-    observeChanges = False
+    updateMode = "none"
     monitorBatteries = False
 
     lastPollTime = None
@@ -276,13 +276,16 @@ class BasePlugin:
             deviceID = [-1]
             return deviceID
 
-    def updateDevice(self, Unit, device_id=None, override_level=None):
+    def updateDevice(self, Unit, override_level=None):
         # Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
         deviceUpdated = False
         # try:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
         ikea_device = self.tradfri_devices[devID]
+
+        if self.updateMode == "poll":
+            ikea_device.Update()
 
         if Devices[Unit].Type == 244:
             # Switches
@@ -508,7 +511,12 @@ class BasePlugin:
         #     self.hasTimedOut = True
 
     def onStart(self):
-        Domoticz.Debug("onStart called")
+        try:
+            if Parameters["Mode6"] == "Debug":
+                Domoticz.Debugging(1)
+                set_debug_level(1)
+        except ValueError:
+            Domoticz.Debugging(0)
 
         if _globalError is not None:
             Domoticz.Error("Failed to initialize tradfri module.")
@@ -524,11 +532,13 @@ class BasePlugin:
             )
 
         try:
-            if Parameters["Mode2"] == "True":
-                self.observeChanges = True
+            if Parameters["Mode2"] == "poll":
+                self.updateMode = "poll"
                 self.lastPollTime = datetime.datetime.now()
         except ValueError:
             Domoticz.Error("Illegal value for 'Observe changes'. Using default (No)")
+
+        Domoticz.Debug("Monitor changes method: {}".format(self.updateMode))
 
         try:
             self.pollInterval = int(Parameters["Mode3"])
@@ -543,13 +553,6 @@ class BasePlugin:
         else:
             Domoticz.Error("Illegal value for 'Montior batteries'. Using default (No)")
             self.monitorBatteries = False
-
-        try:
-            if Parameters["Mode6"] == "Debug":
-                Domoticz.Debugging(1)
-                set_debug_level(1)
-        except ValueError:
-            Domoticz.Debugging(0)
 
         try:
             set_transition_time(int(Parameters["Mode4"]))
@@ -571,12 +574,8 @@ class BasePlugin:
             Domoticz.Error("Failed to initialize tradfri module.")
             Domoticz.Error(e.message)
 
-        startObserve()
-
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
-
-        stopObserve()
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -694,7 +693,7 @@ class BasePlugin:
             self.hasTimedOut = False
             self.registerDevices()
         else:
-            if self.observeChanges:
+            if self.updateMode == "poll":
                 if self.lastPollTime is None:
                     self.lastPollTime = datetime.datetime.now()
                 else:
