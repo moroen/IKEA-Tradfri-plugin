@@ -67,3 +67,7 @@ def create_ident(ip, key, configFile=None):
 
     conf_obj.set_config_items(Gateway=ip, Identity=identity, Passkey=res["9091"])
     conf_obj.save()
+
+    
+
+    
