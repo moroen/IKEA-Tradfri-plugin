@@ -675,7 +675,7 @@ class BasePlugin:
         for aUnit in self.devicesMoving:
             Domoticz.Debug(
                 "Device {} has moving flag set".format(
-                    self.tradfri_devices[aUnit].DeviceID
+                    Devices[aUnit].DeviceID
                 )
             )
             if self.updateDevice(aUnit) is False:
