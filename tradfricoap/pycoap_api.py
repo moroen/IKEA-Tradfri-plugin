@@ -2,14 +2,29 @@ import logging
 
 from . import ApiNotFoundError
 
-try: 
-    from py3coap import setDebugLevel, Request, __version__, POST, PUT, GET
-    from py3coap.errors import HandshakeError, UriNotFoundError, WriteTimeoutError, ReadTimeoutError
+try:
+    from py3coap import (
+        setDebugLevel,
+        Request,
+        __version__,
+        POST,
+        PUT,
+        GET,
+        Observe,
+        ObserveStop,
+    )
+    from py3coap.errors import (
+        HandshakeError,
+        UriNotFoundError,
+        WriteTimeoutError,
+        ReadTimeoutError,
+    )
 
 except ImportError:
     raise ApiNotFoundError("pycoap", "Module 'py3coap' not found.")
 
 from .config import get_config
+
 
 def set_debug_level(level):
     global _debug
@@ -17,6 +32,7 @@ def set_debug_level(level):
     setDebugLevel(level)
     if level == 1:
         logging.basicConfig(level=logging.DEBUG)
+
 
 def request(uri, payload=None, method="put"):
     conf = get_config()
@@ -31,9 +47,9 @@ def request(uri, payload=None, method="put"):
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
-            
+
     else:
-        method = POST if method=="post" else PUT
+        method = POST if method == "post" else PUT
         return Request(
             uri="coaps://{}:{}/{}".format(conf["Gateway"], 5684, uri),
             payload=payload,
@@ -41,6 +57,7 @@ def request(uri, payload=None, method="put"):
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
+
 
 def create_ident(ip, key, configFile=None):
     import uuid
@@ -53,9 +70,9 @@ def create_ident(ip, key, configFile=None):
     uri = "coaps://{}:{}/{}".format(ip, 5684, "15011/9063")
 
     result = Request(
-            uri, payload=payload, method=POST, ident="Client_identity", key=key
-        )
-    
+        uri, payload=payload, method=POST, ident="Client_identity", key=key
+    )
+
     logging.debug("Create ident result: {}".format(result))
 
     if result is None:
@@ -67,7 +84,3 @@ def create_ident(ip, key, configFile=None):
 
     conf_obj.set_config_items(Gateway=ip, Identity=identity, Passkey=res["9091"])
     conf_obj.save()
-
-    
-
-    

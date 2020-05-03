@@ -21,7 +21,7 @@
         </param>
         <param field="Mode2" label="Monitor changes" width="75px">
             <options>
-                <option label="No" value="False"  default="true" />
+                <option label="No" value="none"  default="true" />
                 <option label="Poll" value="poll"/>
                 <option label="Observe" value="observe"/>
             </options>
@@ -106,10 +106,6 @@ if __name__ == "__main__":
                 'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"'
             )
         exit()
-
-    if args.command == "raw":
-        dev = get_device(args.ID)
-        print(dev.Raw)
 
     # if args.command == "observe":
     #     from tradfricoap.observe import startObserve, stopObserve
@@ -202,8 +198,10 @@ try:
         WriteTimeoutError,
         set_debug_level,
         DeviceNotFoundError,
+        MethodNotSupported,
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
+    from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
     _globalError = "Unable to find tradfricoap"
@@ -238,7 +236,6 @@ class BasePlugin:
     }
 
     def __init__(self):
-        # self.var = 123
         return
 
     def indexRegisteredDevices(self):
@@ -350,17 +347,15 @@ class BasePlugin:
                 else:
                     image = "IKEA-Tradfri_batterylevelempty"
 
-                Devices[Unit].Update(
-                    nValue=0,
-                    sValue=str(ikea_device.Battery_level),
-                    Image=Images[image].ID,
-                )
+                if Devices[Unit].sValue != str(ikea_device.Battery_level):
+                    Devices[Unit].Update(
+                        nValue=0,
+                        sValue=str(ikea_device.Battery_level),
+                        Image=Images[image].ID,
+                    )
 
         self.hasTimedOut = False
         return deviceUpdated
-        # except DeviceNotFoundError as e:
-        #     Domoticz.Error("Device {} not found on gateway!".format(e.DeviceID))
-        #     return
 
         # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
         #     Domoticz.Debug(
@@ -506,10 +501,6 @@ class BasePlugin:
 
         self.hasTimedOut = False
 
-        # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-        #     Domoticz.Debug("Connection to gateway timed out")
-        #     self.hasTimedOut = True
-
     def onStart(self):
         try:
             if Parameters["Mode6"] == "Debug":
@@ -535,8 +526,13 @@ class BasePlugin:
             if Parameters["Mode2"] == "poll":
                 self.updateMode = "poll"
                 self.lastPollTime = datetime.datetime.now()
+            elif Parameters["Mode2"] == "observe":
+                self.updateMode = "observe"
+            elif Parameters["Mode2"] == "none":
+                self.updateMode = "none"
         except ValueError:
             Domoticz.Error("Illegal value for 'Observe changes'. Using default (No)")
+            self.updateMode = "none"
 
         Domoticz.Debug("Monitor changes method: {}".format(self.updateMode))
 
@@ -568,14 +564,24 @@ class BasePlugin:
         for image in Images:
             Domoticz.Debug("Icon {} {}".format(Images[image].ID, Images[image].Name))
 
-        try:
-            self.registerDevices()
-        except ApiNotFoundError as e:
-            Domoticz.Error("Failed to initialize tradfri module.")
-            Domoticz.Error(e.message)
+        # try:
+        self.registerDevices()
+
+        if Parameters["Mode2"] == "observe":
+            Domoticz.Debug("Starting observe")
+            observe_start()
+
+        #except ApiNotFoundError as e:
+        #    Domoticz.Error("Failed to initialize tradfri module.")
+        #    Domoticz.Error(e.message)
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
+        
+        if Parameters["Mode2"] == "observe":
+            Domoticz.Debug("Stopping observe")
+            observe_stop()
+
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -674,9 +680,7 @@ class BasePlugin:
 
         for aUnit in self.devicesMoving:
             Domoticz.Debug(
-                "Device {} has moving flag set".format(
-                    Devices[aUnit].DeviceID
-                )
+                "Device {} has moving flag set".format(Devices[aUnit].DeviceID)
             )
             if self.updateDevice(aUnit) is False:
                 self.devicesMoving.remove(aUnit)
