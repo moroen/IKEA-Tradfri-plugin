@@ -27,6 +27,7 @@
             </options>
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
+        <param field="Port" label="Observe port" width="30px" required="true" default="5000"/>
         <param field="Mode5" label="Montior batteries" width="75px">
             <options>
                 <option label="Yes" value="True"/>
@@ -227,6 +228,9 @@ class BasePlugin:
     hasTimedOut = False
     devicesMoving = []
     commandQueue = []
+
+    httpServerConn = None
+    httpServerConns = {}
 
     icons = {
         "IKEA-Tradfri_batterylevelfull": "icons/battery_full.zip",
@@ -567,21 +571,29 @@ class BasePlugin:
         # try:
         self.registerDevices()
 
+        # Observe
+
         if Parameters["Mode2"] == "observe":
-            Domoticz.Debug("Starting observe")
+            Domoticz.Debug("Observing changes")
+            self.httpServerConn = Domoticz.Connection(
+                Name="Server Connection",
+                Transport="TCP/IP",
+                Protocol="HTTP",
+                Port=Parameters["Port"],
+            )
+            self.httpServerConn.Listen()
             observe_start()
 
-        #except ApiNotFoundError as e:
+        # except ApiNotFoundError as e:
         #    Domoticz.Error("Failed to initialize tradfri module.")
         #    Domoticz.Error(e.message)
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
-        
+
         if Parameters["Mode2"] == "observe":
             Domoticz.Debug("Stopping observe")
             observe_stop()
-
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -602,7 +614,17 @@ class BasePlugin:
         Domoticz.Debug("onConnect called")
 
     def onMessage(self, Connection, Data):
-        Domoticz.Debug("onMessage called")
+        Domoticz.Log(
+            "onMessage called for connection: "
+            + Connection.Address
+            + ":"
+            + Connection.Port
+        )
+        # DumpHTTPResponseToLog(Data)
+
+        print(Data["Data"].decode("utf-8"))
+
+        # test = json.loads(Data.decode("utf-8"))
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug(
@@ -750,7 +772,10 @@ def onHeartbeat():
     global _plugin
     _plugin.onHeartbeat()
 
-    # Generic helper functions
+
+#
+# Generic helper functions
+#
 
 
 def DumpConfigToLog():
@@ -773,3 +798,15 @@ def firstFree():
         if num not in Devices:
             return num
     return
+
+
+def DumpHTTPResponseToLog(httpDict):
+    if isinstance(httpDict, dict):
+        Domoticz.Log("HTTP Details (" + str(len(httpDict)) + "):")
+        for x in httpDict:
+            if isinstance(httpDict[x], dict):
+                Domoticz.Log("--->'" + x + " (" + str(len(httpDict[x])) + "):")
+                for y in httpDict[x]:
+                    Domoticz.Log("------->'" + y + "':'" + str(httpDict[x][y]) + "'")
+            else:
+                Domoticz.Log("--->'" + x + "':'" + str(httpDict[x]) + "'")

@@ -152,11 +152,4 @@ def create_ident(ip, key, configFile=None):
     if result["Status"] == "WriteTimeoutError":
         raise WriteTimeoutError
     return None
-
-
-def observe_start():
-    raise MethodNotSupported("coapcmd", "Method observe_start not supported")
-
-
-def observe_stop():
-    raise MethodNotSupported("coapcmd", "Method observe_stop not supported")
+    
