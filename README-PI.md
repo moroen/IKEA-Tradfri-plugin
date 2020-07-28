@@ -35,7 +35,7 @@ $ sudo -H pip3 install -U py3coap
 
 ### 6. Configure and test connection:
 ```shell
-$ cd iKEA-Tradfri
+$ cd IKEA-Tradfri
 $ python3 plugin.py config IP KEY
 $ python3 plugin.py list
 ```
