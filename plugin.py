@@ -144,22 +144,27 @@ if __name__ == "__main__":
                     batteries.append("{}: {} - {}".format(dev.DeviceID, dev.Name, dev.Battery_level))
 
             if len(lights):
+                lights.sort()
                 print("Lights:")
                 print("\n".join(lights))
 
             if len(plugs):
+                plugs.sort()
                 print("\nPlugs:")
                 print("\n".join(plugs))
 
             if len(blinds):
+                blinds.sort()
                 print("\nBlinds:")
                 print("\n".join(blinds))
 
             if len(groups):
+                groups.sort()
                 print("\nGroups:")
                 print("\n".join(groups))
 
             if len(others):
+                others.sort()
                 print("\nOthers:")
                 print("\n".join(others))
 
@@ -251,7 +256,7 @@ class BasePlugin:
             return deviceID
 
     def updateDevice(self, Unit, device_id=None, override_level=None):
-        # Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType))
+        #Domoticz.Debug("Updating device {} - Type {} Subtype {} Switchtype {} - current nValue {} sValue {}".format(Devices[Unit].DeviceID, Devices[Unit].Type, Devices[Unit].SubType, Devices[Unit].SwitchType, Devices[Unit].nValue, Devices[Unit].sValue))
         deviceUpdated = False
         try:
             if device_id is not None:
@@ -280,7 +285,7 @@ class BasePlugin:
                     # Dimmer
                     if self.lights[Unit].Level is not None:
                         if override_level is None:
-                            level = str(int(100 * (int(self.lights[Unit].Level) / 255)))
+                            level = str(round(100 * (int(self.lights[Unit].Level) / 254)))
                         else:
                             level = override_level
 
@@ -288,8 +293,7 @@ class BasePlugin:
                             Devices[Unit].sValue != str(level)
                         ):
                             Devices[Unit].Update(
-                                nValue=self.lights[Unit].State, sValue=str(level)
-                            )
+                                nValue=2 if self.lights[Unit].State else 0, sValue=str(level))
 
                 elif Devices[Unit].SwitchType == 13:
                     # Blinds
@@ -594,6 +598,8 @@ class BasePlugin:
                 return
 
             if Command == "Set Level":
+                Domoticz.Debug("Command Level: {}".format(Level))
+
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
                     self.lights[Unit].Color_level = Level
                 if Devices[Unit].DeviceID[-3:] == ":WS":
@@ -609,6 +615,9 @@ class BasePlugin:
                     self.updateDevice(Unit, override_level=Level)
                 else:
                     self.updateDevice(Unit)
+
+                Domoticz.Debug("Ikea Level: {}".format(self.lights[Unit].Level))
+
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             comObj = {"Unit": Unit, "Command": Command, "Level": Level}
             Domoticz.Debug("Command timed out. Pushing {} onto commandQueue".format(comObj))
