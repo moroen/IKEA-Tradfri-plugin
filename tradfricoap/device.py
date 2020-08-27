@@ -156,7 +156,11 @@ class device:
     @property
     def Level(self):
         if self.lightControl:
-            return self.lightControl[constants.attrLightDimmer]
+            if not constants.attrLightDimmer in self.lightControl:
+                # Device have no dimmer control
+                return self.State
+            else:
+                return self.lightControl[constants.attrLightDimmer]
         elif self.blindControl:
             return self.blindControl[constants.attrBlindPosition]
         elif self._is_group:
