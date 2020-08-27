@@ -345,7 +345,8 @@ class BasePlugin:
             Domoticz.Debug(
                 "Error updating device {}: Connection time out".format(device_id)
             )
-            self.hasTimedOut = True       
+            self.hasTimedOut = True
+           
 
     def registerDevices(self):
         unitIds = self.indexRegisteredDevices()
@@ -483,7 +484,10 @@ class BasePlugin:
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             Domoticz.Debug("Connection to gateway timed out")
             self.hasTimedOut = True
-        
+
+        except KeyError:
+            Domoticz.Debug ("Unrecognized device, skipping")
+
     def onStart(self):
         Domoticz.Debug("onStart called")   
 
