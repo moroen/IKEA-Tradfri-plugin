@@ -7,6 +7,8 @@ def get_args():
 
     subparsers.add_parser("version")
 
+    subparsers.add_parser("test")
+
     parser.add_argument("--debug", action="store_true")
 
     parser_list = subparsers.add_parser("list")

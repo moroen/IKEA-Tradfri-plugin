@@ -18,6 +18,8 @@ class WriteTimeoutError(Exception):
 # _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 _coapCMD = "coapcmd"
 
+def close_connection():
+    pass
 
 def set_debug_level(level):
     pass

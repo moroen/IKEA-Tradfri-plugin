@@ -2,6 +2,7 @@ import json
 from . import constants
 from . import colors
 from .request import request
+from .gateway import close_connection
 from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTimeoutError, DeviceNotFoundError
 
 
@@ -38,6 +39,24 @@ class device:
             except UriNotFoundError:
                 self.__init__(id, is_group=True)
 
+            self.process_result(res)
+
+            
+        else:
+            uri = "{}/{}".format(constants.uri_groups, id)
+            try:
+                res = request(uri)
+            except HandshakeError:
+                raise
+            except UriNotFoundError:
+                # Illeagal deviceID
+                self._is_group = False
+                raise DeviceNotFoundError(id)
+            
+            self.process_result(res)
+
+    def process_result(self, res):
+        if not self._is_group:
             try:
                 self.device = json.loads(res)
                 self.device_info = self.device[constants.attrDeviceInfo]
@@ -54,23 +73,13 @@ class device:
                         self.blindControl = self.device[constants.attrBlindControl][0]
                     except KeyError:
                         pass
-        else:
-            uri = "{}/{}".format(constants.uri_groups, id)
-            try:
-                res = request(uri)
-            except HandshakeError:
-                raise
-            except UriNotFoundError:
-                # Illeagal deviceID
-                self._is_group = False
-                raise DeviceNotFoundError(id)
-
+        elif self._is_group:
             try:
                 self.device = json.loads(res)
                 self.device_info = self.device
                 self._is_group = True
             except TypeError:
-                return
+                return            
 
     def Update(self):
         self.__init__(self._id, self._is_group)
@@ -151,7 +160,10 @@ class device:
             uri = "{}/{}".format(constants.uri_groups, self._id)
             payload = '{{ "{0}": {1} }}'.format(constants.attrLightState, state)
 
-        request(uri, payload)
+        
+        res = request(uri, payload)
+        self.process_result(res)        
+        close_connection()
 
     @property
     def Level(self):
@@ -214,8 +226,10 @@ class device:
                     constants.attrBlindControl, constants.attrBlindPosition, level
                 )
 
-        request(uri, payload)
-        self.Update()
+        res = request(uri, payload)
+        self.process_result(res)
+        close_connection()
+        # self.Update()
 
     @property
     def Color_space(self):
