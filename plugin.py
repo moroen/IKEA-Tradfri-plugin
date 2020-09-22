@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.6" author="moroen" version="0.9.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.6" author="moroen" version="0.9.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -228,7 +228,7 @@ try:
         MethodNotSupported,
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
-    from tradfricoap.observe import observe_start, observe_stop
+    # from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
     _globalError = "Unable to find tradfricoap"
@@ -664,7 +664,7 @@ class BasePlugin:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
-        try:
+        if 1: # try:
             Domoticz.Debug("Calling command")
             if Command == "On":
                 self.tradfri_devices[devID].State = 1
@@ -699,16 +699,16 @@ class BasePlugin:
                 else:
                     self.updateDevice(Unit)
 
-                Domoticz.Debug("Ikea Level: {}".format(self.lights[Unit].Level))
+                Domoticz.Debug("Ikea Level: {}".format(self.tradfri_devices[devID].Level))
 
             Domoticz.Debug("Finnished command")
 
-        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-            comObj = {"Unit": Unit, "Command": Command, "Level": Level}
-            Domoticz.Debug(
-                "Command timed out. Pushing {} onto commandQueue".format(comObj)
-            )
-            self.commandQueue.append(comObj)
+        # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+        #     comObj = {"Unit": Unit, "Command": Command, "Level": Level}
+        #     Domoticz.Debug(
+        #         "Command timed out. Pushing {} onto commandQueue".format(comObj)
+        #     )
+        #     self.commandQueue.append(comObj)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
