@@ -356,15 +356,15 @@ def get_devices(groups=False):
     for aDevice in res:
         devices[aDevice] = device(aDevice)
 
-    if not groups:
-        return devices
+    if groups:
+        uri = constants.uri_groups
+        try:
+            res = json.loads(request(uri))
+        except TypeError:
+            return
 
-    uri = constants.uri_groups
-    try:
-        res = json.loads(request(uri))
-    except TypeError:
-        return
-
-    for aGroup in res:
-        devices[aGroup] = device(aGroup, is_group=True)
+        for aGroup in res:
+            devices[aGroup] = device(aGroup, is_group=True)
+    
+    close_connection()
     return devices

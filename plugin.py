@@ -228,6 +228,7 @@ try:
         MethodNotSupported,
     )
     from tradfricoap.colors import WhiteOptions, colorOptions
+    from tradfricoap.gateway import close_connection
     # from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
@@ -763,6 +764,7 @@ class BasePlugin:
                         self.lastPollTime = datetime.datetime.now()
                         self.indexRegisteredDevices()
 
+        close_connection()
 
 global _plugin
 _plugin = BasePlugin()
