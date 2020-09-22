@@ -5,6 +5,10 @@ def get_args():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
 
+    subparsers.add_parser("version")
+
+    subparsers.add_parser("test")
+
     parser.add_argument("--debug", action="store_true")
 
     parser_list = subparsers.add_parser("list")

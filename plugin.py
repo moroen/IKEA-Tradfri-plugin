@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.1" author="moroen" version="0.9.1" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.6" author="moroen" version="0.9.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -58,6 +58,8 @@ site.main()
 
 _globalError = None
 
+_version = "0.9.6"
+
 # Need to set config before import from module
 try:
     from tradfricoap.config import get_config, host_config
@@ -90,7 +92,7 @@ if __name__ == "__main__":
 
     try:
         from tradfricoap.device import get_devices, get_device
-        from tradfricoap.gateway import create_ident
+        from tradfricoap.gateway import create_ident, close_connection
         from tradfricoap.errors import HandshakeError
 
     except ImportError:
@@ -115,6 +117,26 @@ if __name__ == "__main__":
     #     startObserve()
     #     time.sleep(10)
     #     stopObserve()
+
+    if args.command == "version":
+        print("IKEA Tradfri Plugin - version {}".format(_version))
+
+    if args.command == "test":
+        from time import sleep
+
+        lights = get_devices()
+        for a in range(0, len(lights)):
+            print(a, lights[a].Name)
+
+        
+        for i in range(0, 10):
+            print("Switching no {}".format(i))
+            lights[16].State = 0
+            # close_connection()
+            sleep(3)
+            lights[16].State = 1
+            # close_connection()
+            sleep(3)
 
     if args.command == "list":
         try:
@@ -159,18 +181,22 @@ if __name__ == "__main__":
                 print("\n".join(ikea_devices))
 
             if len(plugs):
+                plugs.sort()
                 print("\nPlugs:")
                 print("\n".join(plugs))
 
             if len(blinds):
+                blinds.sort()
                 print("\nBlinds:")
                 print("\n".join(blinds))
 
             if len(groups):
+                groups.sort()
                 print("\nGroups:")
                 print("\n".join(groups))
 
             if len(others):
+                others.sort()
                 print("\nOthers:")
                 print("\n".join(others))
 
@@ -639,21 +665,24 @@ class BasePlugin:
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
         try:
+            Domoticz.Debug("Calling command")
             if Command == "On":
                 self.tradfri_devices[devID].State = 1
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
-                return
+                # return
 
             if Command == "Off":
                 self.tradfri_devices[devID].State = 0
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
-                return
+                # return
 
             if Command == "Set Level":
+                Domoticz.Debug("Command Level: {}".format(Level))
+
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
                     self.tradfri_devices[devID].Color_level = Level
                 if Devices[Unit].DeviceID[-3:] == ":WS":
@@ -669,6 +698,11 @@ class BasePlugin:
                     self.updateDevice(Unit, override_level=Level)
                 else:
                     self.updateDevice(Unit)
+
+                Domoticz.Debug("Ikea Level: {}".format(self.lights[Unit].Level))
+
+            Domoticz.Debug("Finnished command")
+
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             comObj = {"Unit": Unit, "Command": Command, "Level": Level}
             Domoticz.Debug(
@@ -708,6 +742,7 @@ class BasePlugin:
                 self.devicesMoving.remove(aUnit)
 
         for aCommand in self.commandQueue:
+            Domoticz.Log("Command in queue")
             Domoticz.Debug("Trying to execute {} from commandQueue".format(aCommand))
             self.commandQueue.remove(aCommand)
             self.onCommand(
