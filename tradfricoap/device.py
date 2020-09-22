@@ -288,6 +288,7 @@ class device:
             _transition_time,
         )
         request(uri, payload)
+        close_connection()
 
     @property
     def Color_level(self):
