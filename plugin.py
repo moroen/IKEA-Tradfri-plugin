@@ -619,8 +619,9 @@ class BasePlugin:
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
         if Parameters["Mode2"] == "observe":
-            Domoticz.Debug("Stopping observe")
-            observe_stop()
+            pass
+            # Domoticz.Debug("Stopping observe")
+            # observe_stop()
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
