@@ -366,5 +366,5 @@ def get_devices(groups=False):
         for aGroup in res:
             devices[aGroup] = device(aGroup, is_group=True)
     
-    close_connection()
+    # close_connection()
     return devices

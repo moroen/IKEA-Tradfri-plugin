@@ -13,7 +13,7 @@ from .config import get_config
 
 def close_connection():
     CloseConnection()    
-
+    
 def set_debug_level(level):
     global _debug
     _debug = level
