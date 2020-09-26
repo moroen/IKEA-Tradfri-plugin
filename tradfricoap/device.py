@@ -8,9 +8,11 @@ from .errors import HandshakeError, UriNotFoundError, ReadTimeoutError,WriteTime
 
 _transition_time = 10
 
+
 def set_transition_time(tt):
     global _transition_time
     _transition_time = int(tt)
+
 
 class device:
     lightControl = None
@@ -252,7 +254,7 @@ class device:
             # Use defined deviceInfo if exists
             model = self.device_info[constants.attrDeviceInfo_Model]
             if model in deviceInfo:
-                return (deviceInfo[model]["Color_space"])
+                return deviceInfo[model]["Color_space"]
 
             if self.lightControl is None:
                 return None
@@ -331,9 +333,9 @@ class device:
         if self.device_info is not None:
             if constants.attrBatteryLevel in self.device_info:
                 return self.device_info[constants.attrBatteryLevel]
-                
 
         return None
+
 
 def get_device(id, is_group=False):
     dev = device(id, is_group)
@@ -341,7 +343,7 @@ def get_device(id, is_group=False):
 
 
 def get_devices(groups=False):
-    devices = []
+    devices = {}
 
     uri = constants.uriDevices
     try:
@@ -352,17 +354,17 @@ def get_devices(groups=False):
         raise
 
     for aDevice in res:
-        devices.append(device(aDevice))
+        devices[aDevice] = device(aDevice)
 
-    if not groups:
-        return devices
+    if groups:
+        uri = constants.uri_groups
+        try:
+            res = json.loads(request(uri))
+        except TypeError:
+            return
 
-    uri = constants.uri_groups
-    try:
-        res = json.loads(request(uri))
-    except TypeError:
-        return
-
-    for aGroup in res:
-        devices.append(device(aGroup, is_group=True))
+        for aGroup in res:
+            devices[aGroup] = device(aGroup, is_group=True)
+    
+    # close_connection()
     return devices

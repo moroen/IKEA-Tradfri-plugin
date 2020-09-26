@@ -13,13 +13,14 @@ from .config import get_config
 
 def close_connection():
     CloseConnection()    
-
+    
 def set_debug_level(level):
     global _debug
     _debug = level
     setDebugLevel(level)
     if level == 1:
         logging.basicConfig(level=logging.DEBUG)
+
 
 def request(uri, payload=None, method="put"):
     conf = get_config()
@@ -37,7 +38,7 @@ def request(uri, payload=None, method="put"):
             ident=conf["Identity"],
             key=conf["Passkey"],
         )
-            
+
     else:
         method = POST if method=="post" else PUT
         # print ("Calling with method {} for uri: {} with payload: {}".format(method, uri, payload))
@@ -64,9 +65,9 @@ def create_ident(ip, key, configFile=None):
     uri = "coaps://{}:{}/{}".format(ip, 5684, "15011/9063")
 
     result = Request(
-            uri, payload=payload, method=POST, ident="Client_identity", key=key
-        )
-    
+        uri, payload=payload, method=POST, ident="Client_identity", key=key
+    )
+
     logging.debug("Create ident result: {}".format(result))
 
     if result is None:
