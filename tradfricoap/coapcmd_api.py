@@ -19,11 +19,6 @@ class ReadTimeoutError(Exception):
 class WriteTimeoutError(Exception):
     pass
 
-class MethodNotSupported(Exception):
-    def __init__(self, api, message):
-        self.message = message
-        self.api = api
-
 # _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 _coapCMD = "coapcmd"
 
@@ -94,9 +89,11 @@ def request(uri, payload=None, method="put"):
                 stdout=subprocess.PIPE,
             ).stdout.decode("utf-8")
         )
-
+        
         if result["Status"] == "ok":
-            return result["Result"]
+            # Workaround until coapcmd retuns the result from a put command
+            res = request(uri, None)
+            return res
         if result["Status"] == "HandshakeError":
             raise HandshakeError
         if result["Status"] == "UriNotFound":

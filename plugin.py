@@ -125,18 +125,9 @@ if __name__ == "__main__":
         from time import sleep
 
         lights = get_devices()
-        for a in range(0, len(lights)):
-            print(a, lights[a].Name)
+        print(lights[65550].Name)
+        lights[65550].State = 0
 
-        
-        for i in range(0, 10):
-            print("Switching no {}".format(i))
-            lights[16].State = 0
-            # close_connection()
-            sleep(3)
-            lights[16].State = 1
-            # close_connection()
-            sleep(3)
 
     if args.command == "list":
         try:
@@ -216,7 +207,7 @@ if __name__ == "__main__":
 ## Domoticz Plugin
 import Domoticz
 
-try:
+if 1: #try:
     from tradfricoap.device import get_device, get_devices, set_transition_time
     from tradfricoap.errors import (
         HandshakeError,
@@ -231,12 +222,12 @@ try:
     from tradfricoap.gateway import close_connection
     # from tradfricoap.observe import observe_start, observe_stop
 
-except ImportError:
-    _globalError = "Unable to find tradfricoap"
-except SystemExit:
-    _globalError = "Unable to initialize tradfricoap"
-except ApiNotFoundError as e:
-    _globalError = e.message
+# except ImportError:
+#     _globalError = "Unable to find tradfricoap"
+# except SystemExit:
+#     _globalError = "Unable to initialize tradfricoap"
+# except ApiNotFoundError as e:
+#     _globalError = e.message
 
 
 class BasePlugin:
