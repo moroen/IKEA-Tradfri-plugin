@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.8" author="moroen" version="0.9.8" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.9" author="moroen" version="0.9.9" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -58,7 +58,7 @@ site.main()
 
 _globalError = None
 
-_version = "0.9.8"
+_version = "0.9.9"
 
 # Need to set config before import from module
 try:
