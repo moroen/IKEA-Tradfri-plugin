@@ -23,7 +23,7 @@
             <options>
                 <option label="No" value="none"  default="true" />
                 <option label="Poll" value="poll"/>
-                <option label="Observe" value="observe"/>
+                <!–– <option label="Observe" value="observe"/> -->
             </options>
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
