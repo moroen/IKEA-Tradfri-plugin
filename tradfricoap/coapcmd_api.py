@@ -2,7 +2,6 @@ import logging, subprocess, os, json
 
 from .config import get_config
 from . import ApiNotFoundError
-from .errors import MethodNotSupported
 
 
 class HandshakeError(Exception):
@@ -20,6 +19,10 @@ class ReadTimeoutError(Exception):
 class WriteTimeoutError(Exception):
     pass
 
+class MethodNotSupported(Exception):
+    def __init__(self, api, message):
+        self.message = message
+        self.api = api
 
 # _coapCMD = "{}/{}".format(os.path.dirname(os.path.abspath(__file__)), "../bin/coapcmd")
 _coapCMD = "coapcmd"
@@ -29,7 +32,6 @@ def close_connection():
 
 def set_debug_level(level):
     pass
-
 
 def set_coapcmd(cmd):
     global _coapCMD

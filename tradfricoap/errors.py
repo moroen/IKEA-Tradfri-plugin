@@ -34,8 +34,3 @@ class DeviceNotFoundError(Exception):
     def __init__(self, deviceid):
         self.DeviceID = deviceid
 
-
-class MethodNotSupported(Exception):
-    def __init__(self, api, message):
-        self.message = message
-        self.api = api

@@ -666,7 +666,7 @@ class BasePlugin:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
-        if 1: # try:
+        try:
             Domoticz.Debug("Calling command")
             if Command == "On":
                 self.tradfri_devices[devID].State = 1
@@ -705,12 +705,12 @@ class BasePlugin:
 
             Domoticz.Debug("Finnished command")
 
-        # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-        #     comObj = {"Unit": Unit, "Command": Command, "Level": Level}
-        #     Domoticz.Debug(
-        #         "Command timed out. Pushing {} onto commandQueue".format(comObj)
-        #     )
-        #     self.commandQueue.append(comObj)
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+            comObj = {"Unit": Unit, "Command": Command, "Level": Level}
+            Domoticz.Debug(
+                "Command timed out. Pushing {} onto commandQueue".format(comObj)
+            )
+            self.commandQueue.append(comObj)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
