@@ -301,7 +301,10 @@ class BasePlugin:
         # try:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
-        ikea_device = self.tradfri_devices[devID]
+        if devID in self.tradfri_devices:
+            ikea_device = self.tradfri_devices[devID]
+        else:
+            return
 
         if self.updateMode == "poll":
             ikea_device.Update()
