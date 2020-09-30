@@ -27,7 +27,7 @@
             </options>
         </param>
         <param field="Mode3" label="Polling interval (seconds)" width="75px" required="true" default="300"/>
-        <param field="Port" label="Observe port" width="30px" required="true" default="5000"/>
+        <!–– <param field="Port" label="Observe port" width="30px" required="true" default="5000"/> -->
         <param field="Mode5" label="Montior batteries" width="75px">
             <options>
                 <option label="Yes" value="True"/>
