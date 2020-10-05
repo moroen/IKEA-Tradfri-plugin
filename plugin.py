@@ -207,7 +207,7 @@ if __name__ == "__main__":
 ## Domoticz Plugin
 import Domoticz
 
-if 1: #try:
+try:
     from tradfricoap.device import get_device, get_devices, set_transition_time
     from tradfricoap.errors import (
         HandshakeError,
@@ -222,12 +222,12 @@ if 1: #try:
     from tradfricoap.gateway import close_connection
     # from tradfricoap.observe import observe_start, observe_stop
 
-# except ImportError:
-#     _globalError = "Unable to find tradfricoap"
-# except SystemExit:
-#     _globalError = "Unable to initialize tradfricoap"
-# except ApiNotFoundError as e:
-#     _globalError = e.message
+except ImportError:
+    _globalError = "Unable to find tradfricoap"
+except SystemExit:
+    _globalError = "Unable to initialize tradfricoap"
+except ApiNotFoundError as e:
+    _globalError = e.message
 
 
 class BasePlugin:
@@ -527,6 +527,12 @@ class BasePlugin:
         self.hasTimedOut = False
 
     def onStart(self):
+
+        if _globalError is not None:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(_globalError)
+            return
+
         try:
             if Parameters["Mode6"] == "Debug":
                 Domoticz.Debugging(1)
@@ -534,10 +540,6 @@ class BasePlugin:
         except ValueError:
             Domoticz.Debugging(0)
 
-        if _globalError is not None:
-            Domoticz.Error("Failed to initialize tradfri module.")
-            Domoticz.Error(_globalError)
-            return
 
         try:
             if Parameters["Mode1"] == "True":
