@@ -372,12 +372,12 @@ class BasePlugin:
                 else:
                     image = "IKEA-Tradfri_batterylevelempty"
 
-                if Devices[Unit].sValue != str(ikea_device.Battery_level):
-                    Devices[Unit].Update(
-                        nValue=0,
-                        sValue=str(ikea_device.Battery_level),
-                        Image=Images[image].ID,
-                    )
+                # if Devices[Unit].sValue != str(ikea_device.Battery_level):
+                Devices[Unit].Update(
+                    nValue=0,
+                    sValue=str(ikea_device.Battery_level),
+                    Image=Images[image].ID,
+                )
 
         self.hasTimedOut = False
         return deviceUpdated
