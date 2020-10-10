@@ -30,8 +30,9 @@
         <!–– <param field="Port" label="Observe port" width="30px" required="true" default="5000"/> -->
         <param field="Mode5" label="Montior batteries" width="75px">
             <options>
-                <option label="Yes" value="True"/>
-                <option label="No" value="False"  default="true" />
+                <option label="No" value="False"/>
+                <option label="On value changed" value="onChanged" default="true"/>
+                <option label="On every poll" value="onPoll"/>
             </options>
         </param>
         <param field="Mode4" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
@@ -238,7 +239,9 @@ class BasePlugin:
 
     includeGroups = False
     updateMode = "none"
-    monitorBatteries = False
+    
+    monitor_batteries = False
+    monitor_batteries_method = "onChanged"
 
     lastPollTime = None
     pollInterval = None
@@ -360,7 +363,7 @@ class BasePlugin:
                             sValue=str(ikea_device.Color_level),
                         )
 
-        elif Devices[Unit].Type == 243 and self.monitorBatteries:
+        elif Devices[Unit].Type == 243 and self.monitor_batteries:
             if Devices[Unit].SubType == 31:
                 # Custom sensor
                 if ikea_device.Battery_level >= 75:
@@ -372,12 +375,12 @@ class BasePlugin:
                 else:
                     image = "IKEA-Tradfri_batterylevelempty"
 
-                # if Devices[Unit].sValue != str(ikea_device.Battery_level):
-                Devices[Unit].Update(
-                    nValue=0,
-                    sValue=str(ikea_device.Battery_level),
-                    Image=Images[image].ID,
-                )
+                if (Devices[Unit].sValue != str(ikea_device.Battery_level)) or self.monitor_batteries_method=="onPoll":
+                    Devices[Unit].Update(
+                        nValue=0,
+                        sValue=str(ikea_device.Battery_level),
+                        Image=Images[image].ID,
+                    )
 
         self.hasTimedOut = False
         return deviceUpdated
@@ -471,7 +474,7 @@ class BasePlugin:
                     if aLight.Color_space == "W":
                         continue
 
-            if self.monitorBatteries:
+            if self.monitor_batteries:
                 if (
                     aLight.Battery_level is not None
                     and devID + ":Battery" not in unitIds
@@ -520,7 +523,7 @@ class BasePlugin:
             if not int(devID[0]) in self.tradfri_devices:
                 Devices[aUnit].Delete()
 
-            if not self.monitorBatteries and len(devID) == 2:
+            if not self.monitor_batteries and len(devID) == 2:
                 if devID[1] == "Battery":
                     Devices[aUnit].Delete()
 
@@ -569,13 +572,15 @@ class BasePlugin:
             Domoticz.Error("Illegal value for 'Polling interval'. Using default (300)")
             self.pollInterval = 300
 
-        if Parameters["Mode5"] == "True":
-            self.monitorBatteries = True
-        elif Parameters["Mode5"] == "False":
-            self.monitorBatteries = False
-        else:
-            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (No)")
-            self.monitorBatteries = False
+        Domoticz.Error(Parameters["Mode5"])
+
+        try:
+            self.monitor_batteries_method = Parameters["Mode5"]
+            self.monitor_batteries = False if Parameters["Mode5"] == "False" else True
+        except ValueError:
+            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (On value changed)")
+            self.monitor_batteries = True
+            self.monitor_batteries_method = "onChanged"
 
         try:
             set_transition_time(int(Parameters["Mode4"]))
