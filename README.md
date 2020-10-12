@@ -25,7 +25,7 @@ Most systems capable of running domoticz and has a version of python3 available 
 
 ## Local Installation
 
-For instructions on installing the plugin on a Raspberry PI, please see the [readme](README-PI.md) for Raspberry.
+This is the instructions for *nix based systems and Windows. There are special instructions for installing on a Raspberry PI or Synology. For instructions on installing the plugin these systems, please see the readme for [Raspberry](README-PI.md) or [Synology](README-Synology.md).
 
 ### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory:
 ```
@@ -40,7 +40,7 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 ```
 
 ### 3. Installing an API for coap requests
-The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
+The plugin support two different COAP-transports for communicating with the IKEA Tradfri gateway. The py3coap module is the default, recommended API. 
 
 On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For systems without a working go compiler, prebuild binaries are available in the repository on github.com. 
 
@@ -72,9 +72,9 @@ Configure the plugin to use coapcmd:
 $ python3 plugin.py api coapcmd
 ```
 
-For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options and prebuilt binaries for common systems. To use a prebuild binary, download the correct file from https://github.com/moroen/coapcmd/releases, rename it to coapcmd (coapcmd.exe on windows) and place it in the bin directory of the plugin (domoticz/plugins/IKEA-Tradfri/bin).
+For systems without a working git and/or go compiler, please refer to the repository for coapcmd (https://github.com/moroen/coapcmd) for alternative install options and prebuilt binaries for common architectures. To use a prebuild binary, download the correct file from https://github.com/moroen/coapcmd/releases, rename it to coapcmd (coapcmd.exe on windows) and place it in the bin directory of the plugin (domoticz/plugins/IKEA-Tradfri/bin).
 
-#### Switching between transports:
+#### Switching between APIs:
 ```shell
 $ python3 plugin.py api pycoap # Use pycoap module
 $ python3 plugin.py api coapcmd # Use coapcmd
@@ -120,7 +120,7 @@ To update the plugin to the newest version, stop domoticz, enter the plugin dire
   $ git pull
 ```
 
-It's usually recommended to upgrade to the latest version of py3coap as well:
+If using the py3coap API, it's usually recommended to upgrade to the latest version of py3coap as well:
 ```shell
   $ sudo -H pip3 install -U py3coap
 ```
