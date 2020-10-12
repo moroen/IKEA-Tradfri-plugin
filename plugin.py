@@ -67,141 +67,31 @@ try:
     from tradfricoap import ApiNotFoundError
 
     CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-    CONF = get_config(CONFIGFILE)
+    CONF = get_config(CONFIGFILE).configuation
 
-    if CONF["Api"] == "Coapcmd":
-        from tradfricoap.coapcmd_api import set_coapcmd
+    #if CONF["Api"] == "Coapcmd":
+    
+    from tradfricoap.coapcmd_api import set_coapcmd
 
-        set_coapcmd(
-            "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
-        )
+    set_coapcmd(
+        "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
+    )
 
 except ImportError:
     _globalError = "Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
-    from cli import get_args
-
-    # from tradfri.config import host_config
-
-    args = get_args()
-    if args.command == "api":
-        config = host_config(CONFIGFILE)
-        config.set_config_item("api", args.API)
-        config.save()
-        exit()
-
+    from tradfricoap.cli import process_args, get_args
+    
     try:
-        from tradfricoap.device import get_devices, get_device
-        from tradfricoap.gateway import create_ident, close_connection
-        from tradfricoap.errors import HandshakeError
+        args = get_args()
+        if args.command == "version":
+            from tradfricoap.version import get_version_info
+            print("IKEA Tradfri Plugin: {}".format(_version))
 
-    except ImportError:
-        print("Module 'tradfricoap' not found!")
-        exit()
-
+        process_args(args)
     except ApiNotFoundError as e:
-        if e.api == "pycoap":
-            print(
-                'Py3coap module not found!\nInstall with "pip3 install py3coap" or select another api with "python3 plugin.py api"'
-            )
-        elif e.api == "coapcmd":
-            print(
-                'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"'
-            )
-        exit()
-
-    # if args.command == "observe":
-    #     from tradfricoap.observe import startObserve, stopObserve
-
-    #     print("observe")
-    #     startObserve()
-    #     time.sleep(10)
-    #     stopObserve()
-
-    if args.command == "version":
-        print("IKEA Tradfri Plugin - version {}".format(_version))
-
-    if args.command == "test":
-        from time import sleep
-
-        lights = get_devices()
-        print(lights[65550].Name)
-        lights[65550].State = 0
-
-
-    if args.command == "list":
-        try:
-            devices = get_devices(args.groups)
-        except HandshakeError:
-            print("Connection timed out")
-            exit()
-
-        except ApiNotFoundError as e:
-            print(e.message)
-            exit()
-
-        if devices is None:
-            print("Unable to get list of devices")
-        else:
-            ikea_devices = []
-            plugs = []
-            blinds = []
-            groups = []
-            batteries = []
-            others = []
-
-            for key, dev in devices.items():
-                if dev.Type == "Light":
-                    ikea_devices.append(dev.Description)
-                elif dev.Type == "Plug":
-                    plugs.append(dev.Description)
-                elif dev.Type == "Blind":
-                    blinds.append(dev.Description)
-                elif dev.Type == "Group":
-                    groups.append(dev.Description)
-                else:
-                    others.append(dev.Description)
-
-                if dev.Battery_level is not None:
-                    batteries.append(
-                        "{}: {} - {}".format(dev.DeviceID, dev.Name, dev.Battery_level)
-                    )
-
-            if len(ikea_devices):
-                print("ikea_devices:")
-                print("\n".join(ikea_devices))
-
-            if len(plugs):
-                plugs.sort()
-                print("\nPlugs:")
-                print("\n".join(plugs))
-
-            if len(blinds):
-                blinds.sort()
-                print("\nBlinds:")
-                print("\n".join(blinds))
-
-            if len(groups):
-                groups.sort()
-                print("\nGroups:")
-                print("\n".join(groups))
-
-            if len(others):
-                others.sort()
-                print("\nOthers:")
-                print("\n".join(others))
-
-            if len(batteries):
-                print("\nBatteries:")
-                print("\n".join(batteries))
-
-    elif args.command == "config":
-        try:
-            create_ident(args.IP, args.KEY, CONFIGFILE)
-        except HandshakeError:
-            print("Connection timed out")
-
+        print("Error: {}".format(e.message))
     exit()
 
 
@@ -572,8 +462,6 @@ class BasePlugin:
             Domoticz.Error("Illegal value for 'Polling interval'. Using default (300)")
             self.pollInterval = 300
 
-        Domoticz.Error(Parameters["Mode5"])
-
         try:
             self.monitor_batteries_method = Parameters["Mode5"]
             self.monitor_batteries = False if Parameters["Mode5"] == "False" else True
@@ -596,25 +484,25 @@ class BasePlugin:
         for image in Images:
             Domoticz.Debug("Icon {} {}".format(Images[image].ID, Images[image].Name))
 
-        # try:
-        self.registerDevices()
-
+        try:
+            self.registerDevices()
+        
         # Observe
 
-        if Parameters["Mode2"] == "observe":
-            Domoticz.Debug("Observing changes")
-            self.httpServerConn = Domoticz.Connection(
-                Name="Server Connection",
-                Transport="TCP/IP",
-                Protocol="HTTP",
-                Port=Parameters["Port"],
-            )
-            self.httpServerConn.Listen()
-            observe_start()
+            if Parameters["Mode2"] == "observe":
+                Domoticz.Debug("Observing changes")
+                self.httpServerConn = Domoticz.Connection(
+                    Name="Server Connection",
+                    Transport="TCP/IP",
+                    Protocol="HTTP",
+                    Port=Parameters["Port"],
+                )
+                self.httpServerConn.Listen()
+                observe_start()
 
-        # except ApiNotFoundError as e:
-        #    Domoticz.Error("Failed to initialize tradfri module.")
-        #    Domoticz.Error(e.message)
+        except ApiNotFoundError as e:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(e.message)
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
