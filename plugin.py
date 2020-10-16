@@ -406,9 +406,24 @@ class BasePlugin:
                 ).Create()
                 self.updateDevice(new_unit_id)
 
+        # Add reboot button
+        if "15011" not in unitIds:
+            new_unit_id = firstFree()
+            Domoticz.Debug("Registering 15011")
+
+            Domoticz.Device(
+                    Name="Reboot Tradfri Gateway",
+                    Unit=new_unit_id,
+                    TypeName="Push On",
+                    DeviceID="15011",
+                ).Create()
+
         # Remove registered ikea_devices no longer found on the gateway
         for aUnit in list(Devices.keys()):
             devID = str(Devices[aUnit].DeviceID).split(":")
+
+            if devID[0] == "15011":
+                continue
 
             if not int(devID[0]) in self.tradfri_devices:
                 Devices[aUnit].Delete()
@@ -417,6 +432,7 @@ class BasePlugin:
                 if devID[1] == "Battery":
                     Devices[aUnit].Delete()
 
+        
         self.hasTimedOut = False
 
     def onStart(self):
@@ -555,23 +571,27 @@ class BasePlugin:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
+            
         try:
-            Domoticz.Debug("Calling command")
-            if Command == "On":
+            # Reboot
+            if devID == 15011:
+                Domoticz.Error("Reboot called")
+        
+            elif Command == "On":
                 self.tradfri_devices[devID].State = 1
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
                 # return
 
-            if Command == "Off":
+            elif Command == "Off":
                 self.tradfri_devices[devID].State = 0
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
                 # return
 
-            if Command == "Set Level":
+            elif Command == "Set Level":
                 Domoticz.Debug("Command Level: {}".format(Level))
 
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
