@@ -20,7 +20,7 @@ fi
 
 export GOPATH=`pwd`
 
-go get -v github.com/moroen/coapcmd
+go get -u -v github.com/moroen/coapcmd
 
 if [ $? -eq 0 ]
 then
