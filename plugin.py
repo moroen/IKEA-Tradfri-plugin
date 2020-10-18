@@ -61,17 +61,26 @@ _globalError = None
 
 _version = "0.9.13"
 
+_use_local_tradfricoap = False
+
+# See if there is a local tradfricoap-directory
+_use_local_tradfricoap = os.path.isdir("{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__))))
+
 # Need to set config before import from module
 try:
-    from tradfricoap.config import get_config, host_config
-    from tradfricoap import ApiNotFoundError
+    if _use_local_tradfricoap:
+        from tradfricoap.tradfricoap.config import get_config, host_config
+        from tradfricoap.tradfricoap import ApiNotFoundError
+        from tradfricoap.tradfricoap.coapcmd_api import set_coapcmd
+    else:
+        from tradfricoap.config import get_config, host_config
+        from tradfricoap import ApiNotFoundError
+        from tradfricoap.coapcmd_api import set_coapcmd
 
     CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
     CONF = get_config(CONFIGFILE).configuation
 
     #if CONF["Api"] == "Coapcmd":
-    
-    from tradfricoap.coapcmd_api import set_coapcmd
 
     set_coapcmd(
         "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
@@ -81,12 +90,21 @@ except ImportError:
     _globalError = "Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
-    from tradfricoap.cli import process_args, get_args
-    
+    if _globalError is not None:
+        print(_globalError)
+        exit()
+
+    if _use_local_tradfricoap:
+        from tradfricoap.tradfricoap.cli import process_args, get_args
+        from tradfricoap.tradfricoap.version import get_version_info
+    else:
+        from tradfricoap.cli import process_args, get_args
+        from tradfricoap.version import get_version_info
+
     try:
         args = get_args()
         if args.command == "version":
-            from tradfricoap.version import get_version_info
+            
             print("IKEA Tradfri Plugin: {}".format(_version))
 
         process_args(args)
@@ -99,19 +117,33 @@ if __name__ == "__main__":
 import Domoticz
 
 try:
-    from tradfricoap.device import get_device, get_devices, set_transition_time
-    from tradfricoap.errors import (
-        HandshakeError,
-        UriNotFoundError,
-        ReadTimeoutError,
-        WriteTimeoutError,
-        set_debug_level,
-        DeviceNotFoundError,
-        MethodNotSupported,
-    )
-    from tradfricoap.colors import WhiteOptions, colorOptions
-    from tradfricoap.gateway import close_connection
-    # from tradfricoap.observe import observe_start, observe_stop
+    if _use_local_tradfricoap:
+        from tradfricoap.tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.tradfricoap.errors import (
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            set_debug_level,
+            DeviceNotFoundError,
+            MethodNotSupported,
+        )
+        from tradfricoap.tradfricoap.colors import WhiteOptions, colorOptions
+        from tradfricoap.tradfricoap.gateway import close_connection
+    else:
+        from tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.errors import (
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            set_debug_level,
+            DeviceNotFoundError,
+            MethodNotSupported,
+        )
+        from tradfricoap.colors import WhiteOptions, colorOptions
+        from tradfricoap.gateway import close_connection
+        # from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
     _globalError = "Unable to find tradfricoap"
@@ -575,7 +607,13 @@ class BasePlugin:
         try:
             # Reboot
             if devID == 15011:
-                Domoticz.Error("Reboot called")
+                if _use_local_tradfricoap:
+                    from tradfricoap.tradfricoap.gateway import reboot 
+                else:
+                    from tradfricoap.gateway import reboot
+
+                Domoticz.Debug("Reboot IKEA Gateway called")
+                reboot()
         
             elif Command == "On":
                 self.tradfri_devices[devID].State = 1
