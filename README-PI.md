@@ -27,8 +27,9 @@ $ sudo -H pip3 install --upgrade pip
 $ sudo -H pip3 install --upgrade setuptools
 ```
 
-### 5. Install py3coap:
+### 5. Install tradfricoap and py3coap:
 ```shell
+$ sudo -H pip3 install -U tradfricoap
 $ sudo -H pip3 install -U py3coap
 ```
 
@@ -36,7 +37,7 @@ $ sudo -H pip3 install -U py3coap
 ### 6. Configure and test connection:
 ```shell
 $ cd IKEA-Tradfri
-$ python3 plugin.py config IP KEY
+$ python3 plugin.py config gw IP KEY
 $ python3 plugin.py list
 ```
 ### 8. Refer to the main [readme](README.md) for domoticz setup and usage
