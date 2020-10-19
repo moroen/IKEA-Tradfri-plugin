@@ -66,28 +66,42 @@ _use_local_tradfricoap = False
 # See if there is a local tradfricoap-directory
 _use_local_tradfricoap = os.path.isdir("{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__))))
 
-# Need to set config before import from module
-try:
-    if _use_local_tradfricoap:
-        from tradfricoap.tradfricoap.config import get_config, host_config
-        from tradfricoap.tradfricoap import ApiNotFoundError
-        from tradfricoap.tradfricoap.coapcmd_api import set_coapcmd
+if _use_local_tradfricoap:
+    # Check if local tradfricoap is usable
+    from pkg_resources import get_distribution, DistributionNotFound
+
+    if not os.path.isdir("{}/tradfricoap/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))):
+        _globalError = "There seems to be an empty tradfricoap directory present. Please remove it before running the plugin!"
     else:
-        from tradfricoap.config import get_config, host_config
-        from tradfricoap import ApiNotFoundError
-        from tradfricoap.coapcmd_api import set_coapcmd
+        try:
+            get_distribution('tradfricoap')
+            _globalError = "Tradfricoap appears to be installed both as a system- and local module. Please remove the tradfricoap directory before running the plugin!"
+        except DistributionNotFound:
+            pass
 
-    CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-    CONF = get_config(CONFIGFILE).configuation
+if _globalError is None:
+    # Need to set config before import from module
+    try:
+        if _use_local_tradfricoap:
+            from tradfricoap.tradfricoap.config import get_config, host_config
+            from tradfricoap.tradfricoap import ApiNotFoundError
+            from tradfricoap.tradfricoap.coapcmd_api import set_coapcmd
+        else:
+            from tradfricoap.config import get_config, host_config
+            from tradfricoap import ApiNotFoundError
+            from tradfricoap.coapcmd_api import set_coapcmd
 
-    #if CONF["Api"] == "Coapcmd":
+        CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+        CONF = get_config(CONFIGFILE).configuation
 
-    set_coapcmd(
-        "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
-    )
+        #if CONF["Api"] == "Coapcmd":
 
-except ImportError:
-    _globalError = "Module 'tradfricoap' not found"
+        set_coapcmd(
+            "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
+        )
+
+    except ImportError:
+        _globalError = "Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
     if _globalError is not None:

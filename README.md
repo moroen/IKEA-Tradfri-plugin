@@ -46,6 +46,9 @@ The plugin uses the tradfricoap python module ([PyPi](https://pypi.org/search/?q
   $ pip3 install -U tradfricoap
 ```
 
+If upgrading from version 0.9.13 or lower, remove the tradfri directory after upgradring the plugin to version 0.9.14 or higher.
+
+
 ### 3.2 Installing an API for coap requests
 Tradfricoap supports two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
 
