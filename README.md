@@ -28,10 +28,9 @@ Most systems capable of running domoticz and has a version of python3 available 
 For instructions on installing the plugin on a Raspberry PI, please see the [readme](README-PI.md) for Raspberry. For Synology NAS, please check the [Synology-readme](README-Synology.md).
 
 ### 1. Clone IKEA-tradfri plugin into domoticz plugins-directory:
-```
-$ cd domoticz/plugins/
-$ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
-```
+
+    $ cd domoticz/plugins/
+    $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
 
 ### 2. Update pip and setuptools:
 ```shell
@@ -39,22 +38,22 @@ $ git clone https://github.com/moroen/IKEA-Tradfri-plugin.git IKEA-Tradfri
   $ pip3 install -U setuptools
 ```
 
-### 3.1 Install tradfricoap
+### 3. Install tradfricoap
 The plugin uses the tradfricoap python module ([PyPi](https://pypi.org/search/?q=tradfricoap)) 
 
 ```shell
   $ pip3 install -U tradfricoap
 ```
 
-If upgrading from version 0.9.13 or lower, remove the tradfri directory after upgradring the plugin to version 0.9.14 or higher.
+If upgrading from version 0.9.13 or lower, remove the tradfri directory after upgradring the plugin to version 0.9.14 or higher. If the plugin fails to load tradfricoap, check the common errors page in the wiki.
 
 
-### 3.2 Installing an API for coap requests
+### 3.1 Installing an API for coap requests
 Tradfricoap supports two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
 
 On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For systems without a working go compiler, prebuild binaries are available in the repository on github.com. 
 
-#### 3.2a Pycoap (recommended)
+#### 3.1a Pycoap (recommended)
 Py3coap is available as precompiled wheels for linux (amd64), Windows (win32 and amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
 
 ```shell
@@ -70,7 +69,7 @@ $ cd pycoap
 $ sudo -H python3 setup.py install
 ```
 
-#### 3b coapcmd (alternative)
+#### 3.1b coapcmd (alternative)
 The coapcmd command must be installed as IKEA-Tradfri/bin/coapcmd and the plugin configured to use coapcmd for COAP-requests. On systems with git and go installed, coapcmd can be installed with the provided install-script:
 
 ```shell
@@ -134,7 +133,7 @@ To update the plugin to the newest version, stop domoticz, enter the plugin dire
   $ git pull
 ```
 
-It's usually recommended to upgrade to the latest version of tardfricoap py3coap as well:
-```shell
+It's usually recommended to upgrade to the latest version of tradfricoap and py3coap as well:
+```
   $ sudo -H pip3 install -U tradfricoap py3coap
 ```
