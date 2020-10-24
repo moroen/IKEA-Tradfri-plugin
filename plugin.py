@@ -666,6 +666,9 @@ class BasePlugin:
 
             Domoticz.Debug("Finnished command")
 
+        except KeyError:
+            Domoticz.Error("OnCommand failed for device: {} with command: {} and level: {}".format(devID, Command, Level))
+
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             comObj = {"Unit": Unit, "Command": Command, "Level": Level}
             Domoticz.Debug(
