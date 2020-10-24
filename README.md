@@ -1,7 +1,18 @@
 # A Domoticz plugin for IKEA Trådfri (Tradfri) gateway
 
+* [Supported IKEA Devices](#Supported-IKEA-Devices)
+* [Compatible hardware](#compatible-hardware)
+* [Software requirements](#software-requirements-)
+* [Local Installation](#local-installation)
+* [Check installed version](#check-installed-version)
+* [Updating plugin](#updating-plugin)
+* [Usage](#usage)
+  + [Observing changes](#observing-changes)
+  + [A note about colors](#a-note-about-colors)
+  + [Curtains](#curtains)
+  
 
-## What's supported
+## Supported IKEA Devices
 The plugin supports and is able to controll the following devices:
 - All bulbs, with dimming for bulbs that are dimmable and setting white temperature/color for CW and CWS bulbs.
 - Outlets / sockets
@@ -18,7 +29,7 @@ Most systems capable of running domoticz and has a version of python3 available 
 - [Raspberry Pi](README-PI.md)
 - [Synology NAS](README-Synology.md)
 
-## Sofware requirements:
+## Software requirements:
 1. Python version 3.5.3 or higher, 3.7.x recommended. 
 2. Domoticz compiled with support for Python-Plugins. 
 3. Upgraded pip and setuptools
@@ -49,19 +60,19 @@ If upgrading from version 0.9.13 or lower, remove the tradfri directory after up
 
 
 ### 3.1 Installing an API for coap requests
-Tradfricoap supports two different COAP-transports for communicating with the IKEA Tradfri gateway. The pycoap module is the default, recommended transport. 
+Tradfricoap supports two different COAP-transports for communicating with the IKEA Tradfri gateway. The py3coap module is the default, recommended transport. 
 
 On systems with a working GO compiler, but without the needed libraries for creating python3 modules (like a Synology NAS), a command line utility - coapcmd (https://github.com/moroen/coapcmd) - can be used. For systems without a working go compiler, prebuild binaries are available in the repository on github.com. 
 
-#### 3.1a Pycoap (recommended)
+#### 3.1a py3coap (recommended)
 Py3coap is available as precompiled wheels for linux (amd64), Windows (win32 and amd64) and MacOS. On other systems, and for installing on a Raspberry PI ([PI readme](README-PI.md)), a go compiler (version 1.11 or greater recommended) and the python3 development libraries must be installed before installing via pip3 and requirements.txt.
 
 ```shell
   $ pip3 install py3coap
 ```
 
-##### Alternative installation of pycoap
-On some systems, installing pycoap using pip fails. Installing pycoap manually might help, or at least give some more information on why installation fails.
+##### Alternative installation of py3coap
+On some systems, installing py3coap using pip fails. Installing py3coap manually might help, or at least give some more information on why installation fails.
 
 ```shell
 $ git clone https://github.com/moroen/pycoap.git
@@ -85,7 +96,7 @@ For systems without a working git and/or go compiler, please refer to the reposi
 
 #### Switching between transports:
 ```shell
-$ python3 plugin.py config api pycoap # Use pycoap module
+$ python3 plugin.py config api py3coap # Use py3coap module
 $ python3 plugin.py config api coapcmd # Use coapcmd
 ```
 
@@ -107,17 +118,6 @@ For other command line commands, refer to help
 ```
 
 ### 6. Restart domoticz and enable IKEA-Tradfri from the hardware page
-## Usage
-Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app.
-
-### Observing changes
-To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 10 seconds, and the intervall should be a multiple of 10 seconds. Using a too short interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
-
-### A note about colors
-When using a CWS (color) bulb, a CWS color selector device is created. Due to a known limitation when setting levels in Domoticz scenes, it's only possible to specify the first half of the available colors in a scene. Selecting a color from the last half, gives the color for level 100 (lime) when the scene is activated. A workaround for this is planned, but currently not implemented. 
-
-### Curtains
-Domoticz sets the position of a curtain as a percentage between 0 (fully open) to 100 (fully closed). You need to set the maximum posistion of the curtain before using Domoticz. Please refer to the instructions from IKEA on how to set the maximum position of a curtain. 
 
 ## Check installed version
 To find the current version of the plugin and modules:
@@ -137,3 +137,16 @@ It's usually recommended to upgrade to the latest version of tradfricoap and py3
 ```
   $ sudo -H pip3 install -U tradfricoap py3coap
 ```
+
+## Usage
+Lights and devices have to be added to the gateway as per IKEA's instructions, using the official IKEA-tradfri app.
+
+### Observing changes
+To observe changes to buld or socket when switched using another method than domoticz, enable "Observe changes" and specify a poll interval in seconds. As long an intervall as possible is recommended. The mininum poll intervall is 10 seconds, and the intervall should be a multiple of 10 seconds. Using a too short interval tends to freeze the gateway, requiring cycling the power of the gateway to restore communication. A polling interval of 300 seconds or greater seems to be fine and reduce the occurence of freezes. 
+
+### A note about colors
+When using a CWS (color) bulb, a CWS color selector device is created. Due to a known limitation when setting levels in Domoticz scenes, it's only possible to specify the first half of the available colors in a scene. Selecting a color from the last half, gives the color for level 100 (lime) when the scene is activated. A workaround for this is planned, but currently not implemented. 
+
+### Curtains
+Domoticz sets the position of a curtain as a percentage between 0 (fully open) to 100 (fully closed). You need to set the maximum posistion of the curtain before using Domoticz. Please refer to the instructions from IKEA on how to set the maximum position of a curtain. 
+

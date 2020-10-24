@@ -94,8 +94,6 @@ if _globalError is None:
         CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
         CONF = get_config(CONFIGFILE).configuation
 
-        #if CONF["Api"] == "Coapcmd":
-
         set_coapcmd(
             "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
         )
