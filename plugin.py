@@ -616,7 +616,7 @@ class BasePlugin:
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
             
-        try:
+        if 1: #try:
             # Reboot
             if devID == 15011:
                 if _use_local_tradfricoap:
@@ -664,15 +664,15 @@ class BasePlugin:
 
             Domoticz.Debug("Finnished command")
 
-        except KeyError:
-            Domoticz.Error("OnCommand failed for device: {} with command: {} and level: {}".format(devID, Command, Level))
+        # except KeyError:
+        #     Domoticz.Error("OnCommand failed for device: {} with command: {} and level: {}".format(devID, Command, Level))
 
-        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-            comObj = {"Unit": Unit, "Command": Command, "Level": Level}
-            Domoticz.Debug(
-                "Command timed out. Pushing {} onto commandQueue".format(comObj)
-            )
-            self.commandQueue.append(comObj)
+        # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+        #     comObj = {"Unit": Unit, "Command": Command, "Level": Level}
+        #     Domoticz.Debug(
+        #         "Command timed out. Pushing {} onto commandQueue".format(comObj)
+        #     )
+        #     self.commandQueue.append(comObj)
 
     def onNotification(self, Name, Subject, Text, Status, Priority, Sound, ImageFile):
         Domoticz.Debug(
