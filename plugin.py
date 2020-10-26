@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.13" author="moroen" version="0.9.13" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.9.17" author="moroen" version="0.9.17" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -30,8 +30,9 @@
         <!–– <param field="Port" label="Observe port" width="30px" required="true" default="5000"/> -->
         <param field="Mode5" label="Montior batteries" width="75px">
             <options>
-                <option label="Yes" value="True"/>
-                <option label="No" value="False"  default="true" />
+                <option label="No" value="False"/>
+                <option label="On value changed" value="onChanged" default="true"/>
+                <option label="On every poll" value="onPoll"/>
             </options>
         </param>
         <param field="Mode4" label="Transition time (tenth of a second)" width="75px" required="false" default="10"/>
@@ -58,149 +59,69 @@ site.main()
 
 _globalError = None
 
-_version = "0.9.13"
+_version = "0.9.17"
 
-# Need to set config before import from module
-try:
-    from tradfricoap.config import get_config, host_config
-    from tradfricoap import ApiNotFoundError
+_use_local_tradfricoap = False
 
-    CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
-    CONF = get_config(CONFIGFILE)
+# See if there is a local tradfricoap-directory
+_use_local_tradfricoap = os.path.isdir("{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__))))
 
-    if CONF["Api"] == "Coapcmd":
-        from tradfricoap.coapcmd_api import set_coapcmd
+if _use_local_tradfricoap:
+    # Check if local tradfricoap is usable
+    from pkg_resources import get_distribution, DistributionNotFound
+
+    if not os.path.isdir("{}/tradfricoap/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))):
+        _globalError = "There seems to be an empty tradfricoap directory present. Please remove it before running the plugin!"
+    else:
+        try:
+            get_distribution('tradfricoap')
+            _globalError = "Tradfricoap appears to be installed both as a system- and local module. Please remove the tradfricoap directory before running the plugin!"
+        except DistributionNotFound:
+            pass
+
+if _globalError is None:
+    # Need to set config before import from module
+    try:
+        if _use_local_tradfricoap:
+            from tradfricoap.tradfricoap.config import get_config, host_config
+            from tradfricoap.tradfricoap import ApiNotFoundError
+            from tradfricoap.tradfricoap.coapcmd_api import set_coapcmd
+        else:
+            from tradfricoap.config import get_config, host_config
+            from tradfricoap import ApiNotFoundError
+            from tradfricoap.coapcmd_api import set_coapcmd
+
+        CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+        CONF = get_config(CONFIGFILE).configuation
 
         set_coapcmd(
             "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
         )
 
-except ImportError:
-    _globalError = "Module 'tradfricoap' not found"
+    except ImportError:
+        _globalError = "Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
-    from cli import get_args
-
-    # from tradfri.config import host_config
-
-    args = get_args()
-    if args.command == "api":
-        config = host_config(CONFIGFILE)
-        config.set_config_item("api", args.API)
-        config.save()
+    if _globalError is not None:
+        print(_globalError)
         exit()
+
+    if _use_local_tradfricoap:
+        from tradfricoap.tradfricoap.cli import process_args, get_args
+        from tradfricoap.tradfricoap.version import get_version_info
+    else:
+        from tradfricoap.cli import process_args, get_args
+        from tradfricoap.version import get_version_info
 
     try:
-        from tradfricoap.device import get_devices, get_device
-        from tradfricoap.gateway import create_ident, close_connection
-        from tradfricoap.errors import HandshakeError
+        args = get_args()
+        if args.command == "version":
+            
+            print("IKEA Tradfri Plugin: {}".format(_version))
 
-    except ImportError:
-        print("Module 'tradfricoap' not found!")
-        exit()
-
+        process_args(args)
     except ApiNotFoundError as e:
-        if e.api == "pycoap":
-            print(
-                'Py3coap module not found!\nInstall with "pip3 install py3coap" or select another api with "python3 plugin.py api"'
-            )
-        elif e.api == "coapcmd":
-            print(
-                'coapcmd  not found!\nInstall with "bash install_coapcmd.sh" or select another api with "python3 plugin.py api"'
-            )
-        exit()
-
-    # if args.command == "observe":
-    #     from tradfricoap.observe import startObserve, stopObserve
-
-    #     print("observe")
-    #     startObserve()
-    #     time.sleep(10)
-    #     stopObserve()
-
-    if args.command == "version":
-        print("IKEA Tradfri Plugin - version {}".format(_version))
-
-    if args.command == "test":
-        from time import sleep
-
-        lights = get_devices()
-        print(lights[65550].Name)
-        lights[65550].State = 0
-
-
-    if args.command == "list":
-        try:
-            devices = get_devices(args.groups)
-        except HandshakeError:
-            print("Connection timed out")
-            exit()
-
-        except ApiNotFoundError as e:
-            print(e.message)
-            exit()
-
-        if devices is None:
-            print("Unable to get list of devices")
-        else:
-            ikea_devices = []
-            plugs = []
-            blinds = []
-            groups = []
-            batteries = []
-            others = []
-
-            for key, dev in devices.items():
-                if dev.Type == "Light":
-                    ikea_devices.append(dev.Description)
-                elif dev.Type == "Plug":
-                    plugs.append(dev.Description)
-                elif dev.Type == "Blind":
-                    blinds.append(dev.Description)
-                elif dev.Type == "Group":
-                    groups.append(dev.Description)
-                else:
-                    others.append(dev.Description)
-
-                if dev.Battery_level is not None:
-                    batteries.append(
-                        "{}: {} - {}".format(dev.DeviceID, dev.Name, dev.Battery_level)
-                    )
-
-            if len(ikea_devices):
-                print("ikea_devices:")
-                print("\n".join(ikea_devices))
-
-            if len(plugs):
-                plugs.sort()
-                print("\nPlugs:")
-                print("\n".join(plugs))
-
-            if len(blinds):
-                blinds.sort()
-                print("\nBlinds:")
-                print("\n".join(blinds))
-
-            if len(groups):
-                groups.sort()
-                print("\nGroups:")
-                print("\n".join(groups))
-
-            if len(others):
-                others.sort()
-                print("\nOthers:")
-                print("\n".join(others))
-
-            if len(batteries):
-                print("\nBatteries:")
-                print("\n".join(batteries))
-
-    elif args.command == "config":
-        try:
-            create_ident(args.IP, args.KEY, CONFIGFILE)
-        except HandshakeError:
-            print("Connection timed out")
-
+        print("Error: {}".format(e.message))
     exit()
 
 
@@ -208,19 +129,33 @@ if __name__ == "__main__":
 import Domoticz
 
 try:
-    from tradfricoap.device import get_device, get_devices, set_transition_time
-    from tradfricoap.errors import (
-        HandshakeError,
-        UriNotFoundError,
-        ReadTimeoutError,
-        WriteTimeoutError,
-        set_debug_level,
-        DeviceNotFoundError,
-        MethodNotSupported,
-    )
-    from tradfricoap.colors import WhiteOptions, colorOptions
-    from tradfricoap.gateway import close_connection
-    # from tradfricoap.observe import observe_start, observe_stop
+    if _use_local_tradfricoap:
+        from tradfricoap.tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.tradfricoap.errors import (
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            set_debug_level,
+            DeviceNotFoundError,
+            MethodNotSupported,
+        )
+        from tradfricoap.tradfricoap.colors import WhiteOptions, colorOptions
+        from tradfricoap.tradfricoap.gateway import close_connection
+    else:
+        from tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.errors import (
+            HandshakeError,
+            UriNotFoundError,
+            ReadTimeoutError,
+            WriteTimeoutError,
+            set_debug_level,
+            DeviceNotFoundError,
+            MethodNotSupported,
+        )
+        from tradfricoap.colors import WhiteOptions, colorOptions
+        from tradfricoap.gateway import close_connection
+        # from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
     _globalError = "Unable to find tradfricoap"
@@ -238,7 +173,9 @@ class BasePlugin:
 
     includeGroups = False
     updateMode = "none"
-    monitorBatteries = False
+    
+    monitor_batteries = False
+    monitor_batteries_method = "onChanged"
 
     lastPollTime = None
     pollInterval = None
@@ -360,7 +297,7 @@ class BasePlugin:
                             sValue=str(ikea_device.Color_level),
                         )
 
-        elif Devices[Unit].Type == 243 and self.monitorBatteries:
+        elif Devices[Unit].Type == 243 and self.monitor_batteries:
             if Devices[Unit].SubType == 31:
                 # Custom sensor
                 if ikea_device.Battery_level >= 75:
@@ -372,7 +309,7 @@ class BasePlugin:
                 else:
                     image = "IKEA-Tradfri_batterylevelempty"
 
-                if Devices[Unit].sValue != str(ikea_device.Battery_level):
+                if (Devices[Unit].sValue != str(ikea_device.Battery_level)) or self.monitor_batteries_method=="onPoll":
                     Devices[Unit].Update(
                         nValue=0,
                         sValue=str(ikea_device.Battery_level),
@@ -471,7 +408,7 @@ class BasePlugin:
                     if aLight.Color_space == "W":
                         continue
 
-            if self.monitorBatteries:
+            if self.monitor_batteries:
                 if (
                     aLight.Battery_level is not None
                     and devID + ":Battery" not in unitIds
@@ -513,17 +450,33 @@ class BasePlugin:
                 ).Create()
                 self.updateDevice(new_unit_id)
 
+        # Add reboot button
+        if "15011" not in unitIds:
+            new_unit_id = firstFree()
+            Domoticz.Debug("Registering 15011")
+
+            Domoticz.Device(
+                    Name="Reboot Tradfri Gateway",
+                    Unit=new_unit_id,
+                    TypeName="Push On",
+                    DeviceID="15011",
+                ).Create()
+
         # Remove registered ikea_devices no longer found on the gateway
         for aUnit in list(Devices.keys()):
             devID = str(Devices[aUnit].DeviceID).split(":")
 
+            if devID[0] == "15011":
+                continue
+
             if not int(devID[0]) in self.tradfri_devices:
                 Devices[aUnit].Delete()
 
-            if not self.monitorBatteries and len(devID) == 2:
+            if not self.monitor_batteries and len(devID) == 2:
                 if devID[1] == "Battery":
                     Devices[aUnit].Delete()
 
+        
         self.hasTimedOut = False
 
     def onStart(self):
@@ -569,13 +522,13 @@ class BasePlugin:
             Domoticz.Error("Illegal value for 'Polling interval'. Using default (300)")
             self.pollInterval = 300
 
-        if Parameters["Mode5"] == "True":
-            self.monitorBatteries = True
-        elif Parameters["Mode5"] == "False":
-            self.monitorBatteries = False
-        else:
-            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (No)")
-            self.monitorBatteries = False
+        try:
+            self.monitor_batteries_method = Parameters["Mode5"]
+            self.monitor_batteries = False if Parameters["Mode5"] == "False" else True
+        except ValueError:
+            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (On value changed)")
+            self.monitor_batteries = True
+            self.monitor_batteries_method = "onChanged"
 
         try:
             set_transition_time(int(Parameters["Mode4"]))
@@ -591,25 +544,25 @@ class BasePlugin:
         for image in Images:
             Domoticz.Debug("Icon {} {}".format(Images[image].ID, Images[image].Name))
 
-        # try:
-        self.registerDevices()
-
+        try:
+            self.registerDevices()
+        
         # Observe
 
-        if Parameters["Mode2"] == "observe":
-            Domoticz.Debug("Observing changes")
-            self.httpServerConn = Domoticz.Connection(
-                Name="Server Connection",
-                Transport="TCP/IP",
-                Protocol="HTTP",
-                Port=Parameters["Port"],
-            )
-            self.httpServerConn.Listen()
-            observe_start()
+            if Parameters["Mode2"] == "observe":
+                Domoticz.Debug("Observing changes")
+                self.httpServerConn = Domoticz.Connection(
+                    Name="Server Connection",
+                    Transport="TCP/IP",
+                    Protocol="HTTP",
+                    Port=Parameters["Port"],
+                )
+                self.httpServerConn.Listen()
+                observe_start()
 
-        # except ApiNotFoundError as e:
-        #    Domoticz.Error("Failed to initialize tradfri module.")
-        #    Domoticz.Error(e.message)
+        except ApiNotFoundError as e:
+            Domoticz.Error("Failed to initialize tradfri module.")
+            Domoticz.Error(e.message)
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
@@ -662,23 +615,33 @@ class BasePlugin:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
+            
         try:
-            Domoticz.Debug("Calling command")
-            if Command == "On":
+            # Reboot
+            if devID == 15011:
+                if _use_local_tradfricoap:
+                    from tradfricoap.tradfricoap.gateway import reboot 
+                else:
+                    from tradfricoap.gateway import reboot
+
+                Domoticz.Debug("Reboot IKEA Gateway called")
+                reboot()
+        
+            elif Command == "On":
                 self.tradfri_devices[devID].State = 1
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
                 # return
 
-            if Command == "Off":
+            elif Command == "Off":
                 self.tradfri_devices[devID].State = 0
                 self.updateDevice(Unit)
                 if self.tradfri_devices[devID].Type == "Blind":
                     self.devicesMoving.append(Unit)
                 # return
 
-            if Command == "Set Level":
+            elif Command == "Set Level":
                 Domoticz.Debug("Command Level: {}".format(Level))
 
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
@@ -700,6 +663,9 @@ class BasePlugin:
                 Domoticz.Debug("Ikea Level: {}".format(self.tradfri_devices[devID].Level))
 
             Domoticz.Debug("Finnished command")
+
+        except KeyError:
+            Domoticz.Error("OnCommand failed for device: {} with command: {} and level: {}".format(devID, Command, Level))
 
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             comObj = {"Unit": Unit, "Command": Command, "Level": Level}
