@@ -46,7 +46,7 @@
 </plugin>
 """
 import traceback
-import os
+import os, platform
 import json
 import site
 import sys
@@ -94,9 +94,15 @@ if _globalError is None:
         CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
         CONF = get_config(CONFIGFILE).configuation
 
-        set_coapcmd(
-            "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
-        )
+
+        if platform.system() == "Windows":
+            set_coapcmd(
+                "{}/bin/coapcmd.exe".format(os.path.dirname(os.path.realpath(__file__)))
+            )
+        else:
+            set_coapcmd(
+                "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
+            )
 
     except ImportError:
         _globalError = "Module 'tradfricoap' not found"
