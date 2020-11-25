@@ -144,7 +144,7 @@ try:
             WriteTimeoutError,
             set_debug_level,
             DeviceNotFoundError,
-            MethodNotSupported,
+            MethodNotAllowedError,
         )
         from tradfricoap.tradfricoap.colors import WhiteOptions, colorOptions
         from tradfricoap.tradfricoap.gateway import close_connection
@@ -157,7 +157,7 @@ try:
             WriteTimeoutError,
             set_debug_level,
             DeviceNotFoundError,
-            MethodNotSupported,
+            MethodNotAllowedError,
         )
         from tradfricoap.colors import WhiteOptions, colorOptions
         from tradfricoap.gateway import close_connection
