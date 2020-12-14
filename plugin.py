@@ -205,15 +205,7 @@ class BasePlugin:
 
     def indexRegisteredDevices(self):
 
-        try:
-            if self.includeGroups:
-                self.tradfri_devices = get_devices(groups=True)
-            else:
-                self.tradfri_devices = get_devices()
-        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
-            Domoticz.Debug("Connection to gateway timed out")
-            self.hasTimedOut = True
-            return
+        
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -243,10 +235,16 @@ class BasePlugin:
         deviceUpdated = False
         # try:
 
-        devID = int(str(Devices[Unit].DeviceID).split(":")[0])
-        if devID in self.tradfri_devices:
-            ikea_device = self.tradfri_devices[devID]
-        else:
+        try:
+            devID = int(str(Devices[Unit].DeviceID).split(":")[0])
+        
+
+            if devID in self.tradfri_devices:
+                ikea_device = self.tradfri_devices[devID]
+            else:
+                return
+        except TypeError:
+            self.hasTimedOut = True
             return
 
         if self.updateMode == "poll":
@@ -327,28 +325,36 @@ class BasePlugin:
 
         # except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
         #     Domoticz.Debug(
-        #         "Error updating device {}: Connection time out".format(device_id)
+        #         "Error updating device {}: Connection time out".format(devID)
         #     )
         #     self.hasTimedOut = True
         # except Exception as err:
-        #     # traceback.print_tb(err.__traceback__)
-        #     # raise
-        #     exc_type, exc_obj, exc_tb = sys.exc_info()
-        #     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        #     print(exc_type, fname, exc_tb.tb_lineno)
         #     raise
 
     def registerDevices(self):
-        unitIds = self.indexRegisteredDevices()
+
+        try:
+            if self.includeGroups:
+                self.tradfri_devices = get_devices(groups=True)
+            else:
+                self.tradfri_devices = get_devices()
+        except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
+            Domoticz.Debug("Connection to gateway timed out")
+            self.hasTimedOut = True
+            return
+
+        
         if self.hasTimedOut:
             return
 
-        # Add unregistred ikea_devices
-        # try:
+        unitIds = self.indexRegisteredDevices()
 
         if self.tradfri_devices == None:
-            Domoticz.Log("Failed to get Tradfri-devices")
+            Domoticz.Error("Failed to get Tradfri-devices")
+            self.hasTimedOut = True
             return
+
+        # Add unregistred ikea_devices
 
         for id, aLight in self.tradfri_devices.items():
 
