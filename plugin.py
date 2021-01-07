@@ -64,17 +64,21 @@ _version = "0.10.3"
 _use_local_tradfricoap = False
 
 # See if there is a local tradfricoap-directory
-_use_local_tradfricoap = os.path.isdir("{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__))))
+_use_local_tradfricoap = os.path.isdir(
+    "{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))
+)
 
 if _use_local_tradfricoap:
     # Check if local tradfricoap is usable
     from pkg_resources import get_distribution, DistributionNotFound
 
-    if not os.path.isdir("{}/tradfricoap/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))):
+    if not os.path.isdir(
+        "{}/tradfricoap/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))
+    ):
         _globalError = "There seems to be an empty tradfricoap directory present. Please remove it before running the plugin!"
     else:
         try:
-            get_distribution('tradfricoap')
+            get_distribution("tradfricoap")
             _globalError = "Tradfricoap appears to be installed both as a system- and local module. Please remove the tradfricoap directory before running the plugin!"
         except DistributionNotFound:
             pass
@@ -91,9 +95,10 @@ if _globalError is None:
             from tradfricoap import ApiNotFoundError
             from tradfricoap.coapcmd_api import set_coapcmd
 
-        CONFIGFILE = "{}/config.json".format(os.path.dirname(os.path.realpath(__file__)))
+        CONFIGFILE = "{}/config.json".format(
+            os.path.dirname(os.path.realpath(__file__))
+        )
         CONF = get_config(CONFIGFILE).configuation
-
 
         if platform.system() == "Windows":
             set_coapcmd(
@@ -122,7 +127,7 @@ if __name__ == "__main__":
     try:
         args = get_args()
         if args.command == "version":
-            
+
             print("IKEA Tradfri Plugin: {}".format(_version))
 
         process_args(args)
@@ -136,7 +141,11 @@ import Domoticz
 
 try:
     if _use_local_tradfricoap:
-        from tradfricoap.tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.tradfricoap.device import (
+            get_device,
+            get_devices,
+            set_transition_time,
+        )
         from tradfricoap.tradfricoap.errors import (
             HandshakeError,
             UriNotFoundError,
@@ -161,6 +170,7 @@ try:
         )
         from tradfricoap.colors import WhiteOptions, colorOptions
         from tradfricoap.gateway import close_connection
+
         # from tradfricoap.observe import observe_start, observe_stop
 
 except ImportError:
@@ -179,7 +189,7 @@ class BasePlugin:
 
     includeGroups = False
     updateMode = "none"
-    
+
     monitor_batteries = False
     monitor_batteries_method = "onChanged"
 
@@ -204,8 +214,6 @@ class BasePlugin:
         return
 
     def indexRegisteredDevices(self):
-
-        
 
         if len(Devices) > 0:
             # Some devices are already defined
@@ -237,7 +245,6 @@ class BasePlugin:
 
         try:
             devID = int(str(Devices[Unit].DeviceID).split(":")[0])
-        
 
             if devID in self.tradfri_devices:
                 ikea_device = self.tradfri_devices[devID]
@@ -259,7 +266,8 @@ class BasePlugin:
                     Devices[Unit].sValue != str(ikea_device.Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=ikea_device.State, sValue=str(ikea_device.Level),
+                        nValue=ikea_device.State,
+                        sValue=str(ikea_device.Level),
                     )
 
             elif Devices[Unit].SwitchType == 7:
@@ -283,7 +291,8 @@ class BasePlugin:
                     Devices[Unit].sValue != str(ikea_device.Level)
                 ):
                     Devices[Unit].Update(
-                        nValue=ikea_device.State, sValue=str(ikea_device.Level),
+                        nValue=ikea_device.State,
+                        sValue=str(ikea_device.Level),
                     )
                     deviceUpdated = True
 
@@ -313,7 +322,9 @@ class BasePlugin:
                 else:
                     image = "IKEA-Tradfri_batterylevelempty"
 
-                if (Devices[Unit].sValue != str(ikea_device.Battery_level)) or self.monitor_batteries_method=="onPoll":
+                if (
+                    Devices[Unit].sValue != str(ikea_device.Battery_level)
+                ) or self.monitor_batteries_method == "onPoll":
                     Devices[Unit].Update(
                         nValue=0,
                         sValue=str(ikea_device.Battery_level),
@@ -343,12 +354,12 @@ class BasePlugin:
             self.hasTimedOut = True
             return
 
-        
         if self.hasTimedOut:
             return
 
         unitIds = self.indexRegisteredDevices()
 
+        # Fallback if json fails with unraised error
         if self.tradfri_devices == None:
             Domoticz.Error("Failed to get Tradfri-devices")
             self.hasTimedOut = True
@@ -468,11 +479,11 @@ class BasePlugin:
             Domoticz.Debug("Registering 15011")
 
             Domoticz.Device(
-                    Name="Reboot Tradfri Gateway",
-                    Unit=new_unit_id,
-                    TypeName="Push On",
-                    DeviceID="15011",
-                ).Create()
+                Name="Reboot Tradfri Gateway",
+                Unit=new_unit_id,
+                TypeName="Push On",
+                DeviceID="15011",
+            ).Create()
 
         # Remove registered ikea_devices no longer found on the gateway
         for aUnit in list(Devices.keys()):
@@ -488,7 +499,6 @@ class BasePlugin:
                 if devID[1] == "Battery":
                     Devices[aUnit].Delete()
 
-        
         self.hasTimedOut = False
 
     def onStart(self):
@@ -504,7 +514,6 @@ class BasePlugin:
                 set_debug_level(1)
         except ValueError:
             Domoticz.Debugging(0)
-
 
         try:
             if Parameters["Mode1"] == "True":
@@ -538,7 +547,9 @@ class BasePlugin:
             self.monitor_batteries_method = Parameters["Mode5"]
             self.monitor_batteries = False if Parameters["Mode5"] == "False" else True
         except ValueError:
-            Domoticz.Error("Illegal value for 'Montior batteries'. Using default (On value changed)")
+            Domoticz.Error(
+                "Illegal value for 'Montior batteries'. Using default (On value changed)"
+            )
             self.monitor_batteries = True
             self.monitor_batteries_method = "onChanged"
 
@@ -558,8 +569,8 @@ class BasePlugin:
 
         try:
             self.registerDevices()
-        
-        # Observe
+
+            # Observe
 
             if Parameters["Mode2"] == "observe":
                 Domoticz.Debug("Observing changes")
@@ -627,18 +638,17 @@ class BasePlugin:
 
         devID = int(str(Devices[Unit].DeviceID).split(":")[0])
 
-            
         try:
             # Reboot
             if devID == 15011:
                 if _use_local_tradfricoap:
-                    from tradfricoap.tradfricoap.gateway import reboot 
+                    from tradfricoap.tradfricoap.gateway import reboot
                 else:
                     from tradfricoap.gateway import reboot
 
                 Domoticz.Debug("Reboot IKEA Gateway called")
                 reboot()
-        
+
             elif Command == "On":
                 self.tradfri_devices[devID].State = 1
                 self.updateDevice(Unit)
@@ -655,6 +665,10 @@ class BasePlugin:
 
             elif Command == "Set Level":
                 Domoticz.Debug("Command Level: {}".format(Level))
+                Level = int(Level)
+
+                if Level not in range(0, 101):
+                    Level = 100 if Level > 100 else 0
 
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
                     self.tradfri_devices[devID].Color_level = Level
@@ -662,7 +676,7 @@ class BasePlugin:
                     self.tradfri_devices[devID].Color_level = Level
                 else:
                     if self.tradfri_devices[devID].Type == "Blind":
-                        self.tradfri_devices[devID].Level = int(Level)
+                        self.tradfri_devices[devID].Level = Level
                         self.devicesMoving.append(Unit)
                     else:
                         self.tradfri_devices[devID].Level = int(Level * 2.54)
@@ -672,12 +686,18 @@ class BasePlugin:
                 else:
                     self.updateDevice(Unit)
 
-                Domoticz.Debug("Ikea Level: {}".format(self.tradfri_devices[devID].Level))
+                Domoticz.Debug(
+                    "Ikea Level: {}".format(self.tradfri_devices[devID].Level)
+                )
 
             Domoticz.Debug("Finnished command")
 
         except KeyError:
-            Domoticz.Error("OnCommand failed for device: {} with command: {} and level: {}".format(devID, Command, Level))
+            Domoticz.Error(
+                "OnCommand failed for device: {} with command: {} and level: {}".format(
+                    devID, Command, Level
+                )
+            )
 
         except (HandshakeError, ReadTimeoutError, WriteTimeoutError):
             comObj = {"Unit": Unit, "Command": Command, "Level": Level}
@@ -740,6 +760,7 @@ class BasePlugin:
                         self.indexRegisteredDevices()
 
         close_connection()
+
 
 global _plugin
 _plugin = BasePlugin()
