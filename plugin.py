@@ -95,9 +95,15 @@ if _globalError is None:
             from tradfricoap import ApiNotFoundError
             from tradfricoap.coapcmd_api import set_coapcmd
 
-        CONFIGFILE = "{}/config.json".format(
-            os.path.dirname(os.path.realpath(__file__))
-        )
+        _plugin_path = os.path.dirname(os.path.realpath(__file__))
+
+        if os.path.isdir("{}/../../data".format(_plugin_path)):
+            CONFIGFILE = "{}/tradfri.json".format("{}/../../data".format(_plugin_path))
+        else:
+            CONFIGFILE = "{}/config.json".format(
+                os.path.dirname(os.path.realpath(__file__))
+            )
+
         CONF = get_config(CONFIGFILE).configuation
 
         if platform.system() == "Windows":
