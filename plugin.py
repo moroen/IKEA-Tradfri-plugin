@@ -95,11 +95,11 @@ if _globalError is None:
             from tradfricoap import ApiNotFoundError
             from tradfricoap.coapcmd_api import set_coapcmd
 
-        _plugin_path = os.path.dirname(os.path.realpath(__file__))
-
-        if os.path.isdir("{}/../../data".format(_plugin_path)):
-            CONFIGFILE = "{}/tradfri.json".format("{}/../../data".format(_plugin_path))
+        if os.path.isdir("/config"):
+            # Running in the moroen/domoticz-tradfri docker container
+            CONFIGFILE = "/config/tradfri.json"
         else:
+            # Running on system
             CONFIGFILE = "{}/config.json".format(
                 os.path.dirname(os.path.realpath(__file__))
             )
