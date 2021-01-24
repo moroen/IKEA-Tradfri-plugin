@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.5" author="moroen" version="0.10.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.5" author="moroen" version="0.11.0" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -59,7 +59,7 @@ site.main()
 
 _globalError = None
 
-_version = "0.10.5"
+_version = "0.11.0"
 
 _use_local_tradfricoap = False
 
@@ -152,6 +152,10 @@ try:
             get_devices,
             set_transition_time,
         )
+        from tradfricoap.tradfricoap.server import (
+            handle_request
+        )
+
         from tradfricoap.tradfricoap.errors import (
             HandshakeError,
             UriNotFoundError,
@@ -165,6 +169,7 @@ try:
         from tradfricoap.tradfricoap.gateway import close_connection
     else:
         from tradfricoap.device import get_device, get_devices, set_transition_time
+        from tradfricoap.server import handle_request
         from tradfricoap.errors import (
             HandshakeError,
             UriNotFoundError,
@@ -208,6 +213,7 @@ class BasePlugin:
 
     httpServerConn = None
     httpServerConns = {}
+    httpClientConn = None
 
     icons = {
         "IKEA-Tradfri_batterylevelfull": "icons/battery_full.zip",
@@ -579,22 +585,21 @@ class BasePlugin:
             # Observe
 
             if Parameters["Mode2"] == "observe":
-                Domoticz.Debug("Observing changes")
-                self.httpServerConn = Domoticz.Connection(
-                    Name="Server Connection",
-                    Transport="TCP/IP",
-                    Protocol="HTTP",
-                    Port=Parameters["Port"],
-                )
-                self.httpServerConn.Listen()
                 observe_start()
 
         except ApiNotFoundError as e:
             Domoticz.Error("Failed to initialize tradfri module.")
             Domoticz.Error(e.message)
 
+        # Server
+        self.httpServerConn = Domoticz.Connection(Name="Server Connection", Transport="TCP/IP", Protocol="HTTP", Port="8085")
+        self.httpServerConn.Listen()
+
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
+
+        # Stopping server
+        self.httpServerConn.Disconnect()
 
         if Parameters["Mode2"] == "observe":
             pass
@@ -618,6 +623,13 @@ class BasePlugin:
 
     def onConnect(self, Connection, Status, Description):
         Domoticz.Debug("onConnect called")
+        # if (Status == 0):
+        #     Domoticz.Log("Connected successfully to: "+Connection.Address+":"+Connection.Port)
+        # else:
+        #     Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Connection.Address+":"+Connection.Port+" with error: "+Description)
+        # Domoticz.Log(str(Connection))
+        # if (Connection != self.httpClientConn):
+        #     self.httpServerConns[Connection.Name] = Connection
 
     def onMessage(self, Connection, Data):
         Domoticz.Log(
@@ -626,11 +638,9 @@ class BasePlugin:
             + ":"
             + Connection.Port
         )
-        # DumpHTTPResponseToLog(Data)
-
-        print(Data["Data"].decode("utf-8"))
-
-        # test = json.loads(Data.decode("utf-8"))
+        ret_val = handle_request(Data)
+        data = ret_val.response
+        Connection.Send({"Status": str(ret_val.status), "Headers": {"Connection": "keep-alive", "Content-Type": "text/json; charset=utf-8", "Access-Control-Allow-Origin": "*"}, "Data": data})
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug(
@@ -731,7 +741,12 @@ class BasePlugin:
         )
 
     def onDisconnect(self, Connection):
-        Domoticz.Debug("onDisconnect called")
+        Domoticz.Log("onDisconnect called for connection '"+Connection.Name+"'.")
+        Domoticz.Log("Server Connections:")
+        for x in self.httpServerConns:
+            Domoticz.Log("--> "+str(x)+"'.")
+        if Connection.Name in self.httpServerConns:
+            del self.httpServerConns[Connection.Name]
 
     def onHeartbeat(self):
         # Domoticz.Debug("onHeartbeat called")
