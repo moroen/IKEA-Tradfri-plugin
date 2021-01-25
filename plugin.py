@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.5" author="moroen" version="0.10.5" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.6" author="moroen" version="0.10.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -59,7 +59,7 @@ site.main()
 
 _globalError = None
 
-_version = "0.10.5"
+_version = "0.10.6"
 
 _use_local_tradfricoap = False
 
@@ -673,14 +673,13 @@ class BasePlugin:
                 Domoticz.Debug("Command Level: {}".format(Level))
                 Level = int(Level)
 
-                if Level not in range(0, 101):
-                    Level = 100 if Level > 100 else 0
-
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
                     self.tradfri_devices[devID].Color_level = Level
-                if Devices[Unit].DeviceID[-3:] == ":WS":
+                elif Devices[Unit].DeviceID[-3:] == ":WS":
                     self.tradfri_devices[devID].Color_level = Level
                 else:
+                    if Level not in range(0, 101):
+                        Level = 100 if Level > 100 else 0
                     if self.tradfri_devices[devID].Type == "Blind":
                         self.tradfri_devices[devID].Level = Level
                         self.devicesMoving.append(Unit)
