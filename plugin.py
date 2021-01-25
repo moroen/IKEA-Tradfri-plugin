@@ -683,14 +683,13 @@ class BasePlugin:
                 Domoticz.Debug("Command Level: {}".format(Level))
                 Level = int(Level)
 
-                if Level not in range(0, 101):
-                    Level = 100 if Level > 100 else 0
-
                 if Devices[Unit].DeviceID[-4:] == ":CWS":
                     self.tradfri_devices[devID].Color_level = Level
-                if Devices[Unit].DeviceID[-3:] == ":WS":
+                elif Devices[Unit].DeviceID[-3:] == ":WS":
                     self.tradfri_devices[devID].Color_level = Level
                 else:
+                    if Level not in range(0, 101):
+                        Level = 100 if Level > 100 else 0
                     if self.tradfri_devices[devID].Type == "Blind":
                         self.tradfri_devices[devID].Level = Level
                         self.devicesMoving.append(Unit)
