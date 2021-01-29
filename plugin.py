@@ -85,7 +85,7 @@ if _use_local_tradfricoap:
 
 if _globalError is None:
     # Need to set config before import from module
-    try:
+    if 1:# try :
         if _use_local_tradfricoap:
             from tradfricoap.tradfricoap.config import get_config, host_config
             from tradfricoap.tradfricoap import ApiNotFoundError
@@ -115,8 +115,8 @@ if _globalError is None:
                 "{}/bin/coapcmd".format(os.path.dirname(os.path.realpath(__file__)))
             )
 
-    except ImportError:
-        _globalError = "Module 'tradfricoap' not found"
+    # except ImportError:
+    #     _globalError = "Module 'tradfricoap' not found"
 
 if __name__ == "__main__":
     if _globalError is not None:
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 ## Domoticz Plugin
 import Domoticz
 
-try:
+if 1:# try:
     if _use_local_tradfricoap:
         from tradfricoap.tradfricoap.device import (
             get_device,
@@ -179,12 +179,12 @@ try:
 
         # from tradfricoap.observe import observe_start, observe_stop
 
-except ImportError:
-    _globalError = "Unable to find tradfricoap"
-except SystemExit:
-    _globalError = "Unable to initialize tradfricoap"
-except ApiNotFoundError as e:
-    _globalError = e.message
+# except ImportError:
+#     _globalError = "Unable to find tradfricoap"
+# except SystemExit:
+#     _globalError = "Unable to initialize tradfricoap"
+# except ApiNotFoundError as e:
+#     _globalError = e.message
 
 
 class BasePlugin:
