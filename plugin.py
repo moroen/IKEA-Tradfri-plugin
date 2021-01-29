@@ -53,6 +53,7 @@ import sys
 import threading
 import time
 import datetime
+from importlib import reload
 
 # Get full import PATH
 site.main()
@@ -152,9 +153,8 @@ try:
             get_devices,
             set_transition_time,
         )
-        from tradfricoap.tradfricoap.server import (
-            handle_request
-        )
+        
+        import tradfricaop.tradfricoap.server as server
 
         from tradfricoap.tradfricoap.errors import (
             HandshakeError,
@@ -169,7 +169,7 @@ try:
         from tradfricoap.tradfricoap.gateway import close_connection
     else:
         from tradfricoap.device import get_device, get_devices, set_transition_time
-        from tradfricoap.server import handle_request
+        import tradfricoap.server as server 
         from tradfricoap.errors import (
             HandshakeError,
             UriNotFoundError,
@@ -638,7 +638,8 @@ class BasePlugin:
             + ":"
             + Connection.Port
         )
-        ret_val = handle_request(Data)
+        reload(server)
+        ret_val = server.handle_request(Data)
         data = ret_val.response
         Connection.Send({"Status": str(ret_val.status), "Headers": {"Connection": "keep-alive", "Content-Type": "text/json; charset=utf-8", "Access-Control-Allow-Origin": "*"}, "Data": data})
 
