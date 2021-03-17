@@ -137,10 +137,11 @@ if __name__ == "__main__":
     try:
         args = get_args()
         if args.command == "version":
-
-            print("IKEA Tradfri Plugin: {}".format(_version))
-
-        process_args(args)
+            if args.short:
+                print(_version)
+            else:
+                print("IKEA Tradfri Plugin: {}".format(_version))
+                process_args(args)
     except ApiNotFoundError as e:
         print("Error: {}".format(e.message))
     exit()
