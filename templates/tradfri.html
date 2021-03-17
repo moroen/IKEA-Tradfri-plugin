@@ -1,0 +1,163 @@
+<style>
+   .tradfri-header {
+       display: grid;
+       grid-template-columns: 1fr 1fr 1fr;
+   }
+
+   .tradfri-header > .btn-group {
+       text-align: center;
+   }
+</style>
+
+
+<div id="plugin-view"></div>
+
+<script type="text/ng-template" id="app/tradfri/index.html">
+   <div class="container">
+      <h1 class="page-header">Ikea Tradfri</h1>
+      <table width=100% style="border: 0">
+         <tr>
+            <td>
+               <div>
+                  <a class="btnstylerev" back-button>{{ ::'Back' | translate }}</a>
+               </div>
+            </td>
+            <td style="text-align: right">
+               <div class="btn-group">
+                  <button class="btn btn-default"
+                          ng-click="$ctrl.setup_clicked()">
+                     Setup
+                  </button>
+                  <button class="btn btn-default"
+                          ng-click="">
+                     Refresh
+                  </button>
+                  <button class="btn btn-default"
+                          ng-click="">
+                     Reboot
+                  </button>
+              </div>
+            </td>
+         </tr>
+      </table>
+      <div class="tradfri-header">
+      </div>
+
+      <div ng-if=$ctrl.showSetup><configure-tradfri /></div>
+      <div ng-if=$ctrl.showDevices><devices-list /></div>
+   </div>
+</script>
+      
+<script type="text/ng-template" id="app/tradfri/setup.html">
+   <h2>Configure</h2>
+   <form name="config" ng-submit="$ctrl.submitConfig()">
+      <table>
+         <tr>
+                     
+            <td style="text-align:right"><label for="tradfri-ip">IP:</label></td>
+            <td><input type="text" ng-model="$ctrl.ip" id="tradfri-ip" style="width: 250px; padding: .2em;" class="text ui-widget-content ui-corner-all"></td>
+         </tr>
+         <tr>       
+            <td style="text-align:right"><label for="tradfri-key">Key:</label></td>
+            <td><input type="text" ng-model="$ctrl.key" id="tradfri-key" style="width: 250px; padding: .2em;" class="text ui-widget-content ui-corner-all"></td>
+         </tr> 
+         <tr> <td colspan="2" style="text-align:right"><input class="btnstyle3" type="submit" value="Apply"></td></tr>
+      </table>
+   </form>
+
+</script>   
+
+<script type="text/ng-template" id="app/tradfri/devices.html">
+   
+   <H2>Devices list</H2>
+
+   <table width="90%" border="0">
+      <tr>
+
+         <td>
+            <ul id="tabs" class="nav nav-tabs sub-tabs" data-tabs="tabs">
+               <li class="active"><a data-target="#zigbee-devices" data-toggle="tab" ng-click="$ctrl.setFilter('Light')">Lights</a></li>
+               <li><a data-target="#zigbee-groups" data-toggle="tab" ng-click="$ctrl.setFilter('Plug')">Plugs</a></li>
+               <li>
+                     <a data-target="#zigbee-map"
+                        data-toggle="tab"
+                        ng-click="$ctrl.setFilter('Group')"
+                     >Group</a>
+               </li>
+            </ul>
+         </td>
+
+         <td style="text-align:right" valign="bottom">
+            <div>Search:
+            <input type="text" id="tradfri-key" style="width: 250px; padding: .2em;" class="text ui-widget-content ui-corner-all" ng-model="$ctrl.search">
+            </div>
+         </td>
+      </tr>
+   <table>
+      
+   <table>
+      <tr ng-repeat="device in filteredItems = ( $ctrl.data | filter: {DeviceType: $ctrl.devicetype} | filter: $ctrl.search )"><td>{{device.DeviceType}}</td><td>{{device.DeviceID}}</td><td>{{device.Name}}</td></tr>
+   
+      <tr ng-hide="filteredItems.length"><td>No items found</td></tr>
+
+   </table>
+</script>
+
+<script type="text/ng-template" id="app/tradfri/test.html">
+   
+   <H2>Test</H2>
+
+   <button class="btn btn-default"
+                          ng-click="$ctrl.test()">
+                     Test
+                  </button>
+
+</script>
+
+<script type="text/ng-template" id="app/tradfri/deviceRenameModal.html">
+   <div class="modal-header">
+       <h3 class="modal-title">{{:: 'Rename Device' | translate }}</h3>
+   </div>
+   <div class="modal-body">
+       <form class="form-horizontal" name="modalForm">
+           <div class="control-group">
+               <label class="control-label" for="device-name">{{:: 'Name' | translate }}:</label>
+               <div class="controls">
+                   <input type="text"
+                          id="device-name"
+                          class="form-control"
+                          required
+                          minlength="1"
+                          maxlength="100"
+                          ng-model="$ctrl.newName">
+               </div>
+           </div>
+       </form>
+   </div>
+   <div class="modal-footer">
+       <button type="button"
+               class="btn btn-primary"
+               ng-disabled="modalForm.$invalid || $ctrl.isSaving || $ctrl.newName == $ctrl.oldName"
+               ng-click="$ctrl.renameDevice()">
+           {{:: 'Rename' | translate }}
+       </button>
+
+       <button type="button"
+               class="btn btn-default"
+               ng-click="$dismiss()">
+           {{:: 'Cancel' | translate }}
+       </button>
+   </div>
+</script>
+
+<script>
+   require(['../templates/tradfri','../templates/tradfri.requests'], function() {
+       angular.element(document).injector().invoke(function($compile) {
+           var $div = angular.element('<tradfri-plugin />');
+           angular.element('#plugin-view').append($div);
+
+           var scope = angular.element($div).scope();
+           $compile($div)(scope);
+       });
+   });
+</script>

@@ -71,11 +71,13 @@ _use_local_tradfricoap = os.path.isdir(
 
 if _use_local_tradfricoap:
     # Check if local tradfricoap is usable
+    print("Using local")
     from pkg_resources import get_distribution, DistributionNotFound
 
-    if not os.path.isdir(
-        "{}/tradfricoap/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))
+    if not os.path.exists(
+        "{}/tradfricoap/setup.py".format(os.path.dirname(os.path.realpath(__file__)))
     ):
+        print("Fy og føy")
         _globalError = "There seems to be an empty tradfricoap directory present. Please remove it before running the plugin!"
     else:
         try:
@@ -146,50 +148,56 @@ if __name__ == "__main__":
 ## Domoticz Plugin
 import Domoticz
 
-try:
-    if _use_local_tradfricoap:
-        from tradfricoap.tradfricoap.device import (
-            get_device,
-            get_devices,
-            set_transition_time,
-        )
-        
-        import tradfricaop.tradfricoap.server as server
+from shutil import copy2
 
-        from tradfricoap.tradfricoap.errors import (
-            HandshakeError,
-            UriNotFoundError,
-            ReadTimeoutError,
-            WriteTimeoutError,
-            set_debug_level,
-            DeviceNotFoundError,
-            MethodNotAllowedError,
-        )
-        from tradfricoap.tradfricoap.colors import WhiteOptions, colorOptions
-        from tradfricoap.tradfricoap.gateway import close_connection
-    else:
-        from tradfricoap.device import get_device, get_devices, set_transition_time
-        import tradfricoap.server as server 
-        from tradfricoap.errors import (
-            HandshakeError,
-            UriNotFoundError,
-            ReadTimeoutError,
-            WriteTimeoutError,
-            set_debug_level,
-            DeviceNotFoundError,
-            MethodNotAllowedError,
-        )
-        from tradfricoap.colors import WhiteOptions, colorOptions
-        from tradfricoap.gateway import close_connection
+if _globalError is None:
 
-        # from tradfricoap.observe import observe_start, observe_stop
+    try:
+        if _use_local_tradfricoap:
+            from tradfricoap.tradfricoap.device import (
+                get_device,
+                get_devices,
+                set_transition_time,
+            )
 
-except ImportError:
-    _globalError = "Unable to find tradfricoap"
-except SystemExit:
-    _globalError = "Unable to initialize tradfricoap"
-except ApiNotFoundError as e:
-    _globalError = e.message
+            import tradfricaop.tradfricoap.server as server
+
+            from tradfricoap.tradfricoap.errors import (
+                HandshakeError,
+                UriNotFoundError,
+                ReadTimeoutError,
+                WriteTimeoutError,
+                set_debug_level,
+                DeviceNotFoundError,
+                MethodNotAllowedError,
+                GatewayNotSpecified,
+            )
+            from tradfricoap.tradfricoap.colors import WhiteOptions, colorOptions
+            from tradfricoap.tradfricoap.gateway import close_connection
+        else:
+            from tradfricoap.device import get_device, get_devices, set_transition_time
+            import tradfricoap.server as server
+            from tradfricoap.errors import (
+                HandshakeError,
+                UriNotFoundError,
+                ReadTimeoutError,
+                WriteTimeoutError,
+                set_debug_level,
+                DeviceNotFoundError,
+                MethodNotAllowedError,
+                GatewayNotSpecified,
+            )
+            from tradfricoap.colors import WhiteOptions, colorOptions
+            from tradfricoap.gateway import close_connection
+
+            # from tradfricoap.observe import observe_start, observe_stop
+
+    except ImportError:
+        _globalError = "Unable to find tradfricoap"
+    except SystemExit:
+        _globalError = "Unable to initialize tradfricoap"
+    except ApiNotFoundError as e:
+        _globalError = e.message
 
 
 class BasePlugin:
@@ -222,8 +230,29 @@ class BasePlugin:
         "IKEA-Tradfri_batterylevelempty": "icons/battery_empty.zip",
     }
 
+    templates = {
+        "tradfri.html", "tradfri.js", "tradfri.requests.js"
+    }
+
     def __init__(self):
         return
+
+    def install_templates(self):
+        Domoticz.Log("Installing custom pages")
+        source_path = Parameters['HomeFolder'] + 'templates/'
+        templates_path = Parameters['StartupFolder'] + 'www/templates/'
+        for aFile in self.templates:
+            # Domoticz.Log("Copy file {} to {}".format(source_path+aFile, templates_path))
+            copy2(source_path + aFile, templates_path)
+
+    def uninstall_templates(self):
+        templates_path = Parameters['StartupFolder'] + 'www/templates/'
+        
+        Domoticz.Log("Removing custom pages")
+
+        for aFile in self.templates:   
+            if (os.path.exists(templates_path + aFile)):
+                os.remove(templates_path + aFile)
 
     def indexRegisteredDevices(self):
 
@@ -571,6 +600,7 @@ class BasePlugin:
             Domoticz.Error("Illegal value for 'Transition time'. Using default (10)")
             set_transition_time(10)
 
+        # Install icons
         for key, filename in self.icons.items():
             if key not in Images:
                 Domoticz.Image(filename).Create()
@@ -578,6 +608,9 @@ class BasePlugin:
         Domoticz.Debug("Number of icons loaded = " + str(len(Images)))
         for image in Images:
             Domoticz.Debug("Icon {} {}".format(Images[image].ID, Images[image].Name))
+
+        # Install templates
+        self.install_templates()
 
         try:
             self.registerDevices()
@@ -591,20 +624,33 @@ class BasePlugin:
             Domoticz.Error("Failed to initialize tradfri module.")
             Domoticz.Error(e.message)
 
+        except GatewayNotSpecified as e:
+            Domoticz.Error("Gateway config not found...")
+
         # Server
-        self.httpServerConn = Domoticz.Connection(Name="Server Connection", Transport="TCP/IP", Protocol="HTTP", Port="8085")
-        self.httpServerConn.Listen()
+        if _globalError is None:
+            Domoticz.Debug("Starting http-server")
+            self.httpServerConn = Domoticz.Connection(
+                Name="Server Connection",
+                Transport="TCP/IP",
+                Protocol="HTTP",
+                Port="8085",
+            )
+            self.httpServerConn.Listen()
 
     def onStop(self):
         Domoticz.Debug("Stopping IKEA Tradfri plugin")
 
         # Stopping server
-        self.httpServerConn.Disconnect()
+        if self.httpClientConn is not None:
+            self.httpServerConn.Disconnect()
 
         if Parameters["Mode2"] == "observe":
             pass
             # Domoticz.Debug("Stopping observe")
             # observe_stop()
+
+        self.uninstall_templates()
 
         Domoticz.Debug(
             "Threads still active: " + str(threading.active_count()) + ", should be 1."
@@ -639,9 +685,23 @@ class BasePlugin:
             + Connection.Port
         )
         reload(server)
+
+        DumpHTTPResponseToLog(Data)
+
         ret_val = server.handle_request(Data)
         data = ret_val.response
-        Connection.Send({"Status": str(ret_val.status), "Headers": {"Connection": "keep-alive", "Content-Type": "text/json; charset=utf-8", "Access-Control-Allow-Origin": "*"}, "Data": data})
+        Connection.Send(
+            {
+                "Status": str(ret_val.status),
+                "StatusText": "Testing",
+                "Headers": {
+                    "Connection": "keep-alive",
+                    "Content-Type": ret_val.content_type,
+                    "Access-Control-Allow-Origin": "*",
+                },
+                "Data": data,
+            }
+        )
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug(
@@ -741,10 +801,10 @@ class BasePlugin:
         )
 
     def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called for connection '"+Connection.Name+"'.")
+        Domoticz.Log("onDisconnect called for connection '" + Connection.Name + "'.")
         Domoticz.Log("Server Connections:")
         for x in self.httpServerConns:
-            Domoticz.Log("--> "+str(x)+"'.")
+            Domoticz.Log("--> " + str(x) + "'.")
         if Connection.Name in self.httpServerConns:
             del self.httpServerConns[Connection.Name]
 
@@ -780,7 +840,8 @@ class BasePlugin:
                         self.lastPollTime = datetime.datetime.now()
                         self.indexRegisteredDevices()
 
-        close_connection()
+        if _globalError is None:
+            close_connection()
 
 
 global _plugin
