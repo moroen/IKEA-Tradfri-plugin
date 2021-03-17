@@ -45,6 +45,7 @@
     </params>
 </plugin>
 """
+from json.decoder import JSONDecodeError
 import traceback
 import os, platform
 import json
@@ -684,12 +685,20 @@ class BasePlugin:
             + ":"
             + Connection.Port
         )
-        reload(server)
-
-        DumpHTTPResponseToLog(Data)
+        
+        # reload(server)
+        # DumpHTTPResponseToLog(Data)
 
         ret_val = server.handle_request(Data)
         data = ret_val.response
+        try:
+            command = json.loads(data.decode("utf-8"))["Command"]
+            if command == "/setup":
+                self.registerDevices()
+
+        except JSONDecodeError:
+            Domoticz.Error("Unable to process server command")
+
         Connection.Send(
             {
                 "Status": str(ret_val.status),
