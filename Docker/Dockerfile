@@ -3,6 +3,8 @@ ARG DOMOTICZ_VERSION="stable"
 
 FROM moroen/domoticz:${DOMOTICZ_VERSION} AS builder
 
+ARG TRADFRICOAP_VERSION="master"
+ARG PY3COAP_VERSION="master"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Oslo
@@ -11,8 +13,8 @@ RUN apt update && apt install -y tzdata python3-dev python3-pip git golang
 
 COPY . /opt/domoticz/plugins/IKEA-Tradfri
 
-RUN git clone --branch development https://github.com/moroen/tradfricoap.git /src/tradfricoap
-RUN git clone --branch development https://github.com/moroen/pycoap.git /src/pycoap 
+RUN git clone --branch ${TRADFRICOAP_VERSION} https://github.com/moroen/tradfricoap.git /src/tradfricoap
+RUN git clone --branch ${PY3COAP_VERSION} https://github.com/moroen/pycoap.git /src/pycoap 
 
 RUN pip3 install setuptools
 

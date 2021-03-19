@@ -82,7 +82,7 @@ ENDIF()
 
 add_custom_target(tradfri
     ALL
-    COMMAND ${Docker_EXECUTABLE} buildx build ${BUILD_CACHE} ${BUILD_TARGET} --platform=${platform} --build-arg DOMOTICZ_VERSION=${Domoticz_Version} -t moroen/domoticz-tradfri:${Tradfri_Version_Number} -t moroen/domoticz-tradfri:${Tradfri_Version} -f Dockerfile ..    
+    COMMAND ${Docker_EXECUTABLE} buildx build ${BUILD_CACHE} ${BUILD_TARGET} --platform=${platform} --build-arg DOMOTICZ_VERSION=${Domoticz_Version} --build-arg TRADFRICOAP_VERSION=${Tradfricoap_Version} --build-arg PY3COAP_VERSION=${Py3coap_Version} -t moroen/domoticz-tradfri:${Tradfri_Version_Number} -t moroen/domoticz-tradfri:${Tradfri_Version} -f Dockerfile ..    
 )
 
 add_custom_target(domoticz
