@@ -1,11 +1,12 @@
 angular
   .module("tradfri", [])
 
-  .component("devicesList", {
+  .component("tradfriDevices", {
     templateUrl: "app/tradfri/devices.html",
     controller: function ($scope, tradfri_requests) {
       var self = this;
       this.devicetype = "Light";
+      this.isLoaded = false;
   
       this.setFilter = function (filter) {
         self.devicetype = filter;
@@ -15,6 +16,7 @@ angular
         .then (function (response) {
           console.log(response);
           self.data = response.data.Devices;
+          self.isLoaded = true;
         }, function (response) {
           alert(response);
         })
@@ -29,6 +31,8 @@ angular
       this.counter = 0;
       this.showDevices = 0;
       this.showSetup = 0;
+
+      var $ctrl = this;
 
       var self = this;
 
@@ -46,7 +50,6 @@ angular
           }
         })
 
-      
       $scope.$on("ShowSetup", function (evt, data) {
           self.showSetup = 1;
           self.showDevices = 0;
@@ -60,6 +63,70 @@ angular
 
       this.setup_clicked = function () {
         $scope.$emit("ShowSetup", "");
+      }
+    }
+  })
+
+  .component("devicesTable", {
+    bindings: {
+      devices: '<',
+      devicetype:'@',
+      onSelect: '&',
+      onUpdate: '&'
+    },
+    template: '<table id="tradfri-devices" class="display" width="100%"></table>',
+    controller: function ($element, $scope, tradfri_requests, dataTableDefaultSettings) {
+      var $ctrl = this;
+      var table;
+      
+      $ctrl.$onInit = function () {
+        console.log("Table onInit");
+        console.log($ctrl.text);
+        console.log($ctrl.devices);
+
+        table = $element.find('table').dataTable(Object.assign({}, dataTableDefaultSettings, {
+          order: [[0, 'asc']],
+          columns: [
+              { title: 'Id', data: 'DeviceID' },
+              { title: 'Name', data: 'Name' },
+          ],
+        }));
+
+        render($ctrl.devicetype);
+      };
+
+      function render (devicetype) {
+        console.log("Render called");
+        var items;
+
+        tradfri_requests.getDevices()
+        .then (function (response) {
+          console.log(response.data.Devices);
+
+          items = response.data.Devices
+          
+          table.api().clear();
+          table.api().rows
+                .add(items)
+                .draw();
+        }, function (response) {
+          console.log(response)
+          if (response.status == 471) {
+            $scope.$emit("ShowSetup", "");
+          } else {
+            $window.alert("Request timed out");
+          }
+        })
+
+        items = Object.assign({}, {Id: 1, Name: 'Test'});
+        console.log(items);   
+        
+        /*
+        table.api().clear();
+        table.api().row
+                .add(items)
+                .draw();
+        */
       }
     }
   })

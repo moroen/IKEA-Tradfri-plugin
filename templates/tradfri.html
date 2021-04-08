@@ -44,7 +44,7 @@
       </div>
 
       <div ng-if=$ctrl.showSetup><configure-tradfri /></div>
-      <div ng-if=$ctrl.showDevices><devices-list /></div>
+      <div ng-if=$ctrl.showDevices><tradfri-devices /></div>
    </div>
 </script>
       
@@ -68,39 +68,38 @@
 </script>   
 
 <script type="text/ng-template" id="app/tradfri/devices.html">
-   
-   <H2>Devices list</H2>
+   <div class="container">
+      <H2 class="page-header">Devices list</H2>
 
-   <table width="90%" border="0">
-      <tr>
+      <ul id="tabs" class="nav nav-tabs sub-tabs" data-tabs="tabs">
+         <li class="active">
+            <a data-target="#tradfri-lights" data-toggle="tab" ng-click="$ctrl.setFilter('Light')">Lights</a>
+         </li>
+         <li>
+            <a data-target="#tradfri-plugs" data-toggle="tab" ng-click="$ctrl.setFilter('Plug')">Plugs</a>
+         </li>
+         <li>
+            <a data-target="#tradfri-groups" data-toggle="tab" ng-click="$ctrl.setFilter('Group')">Group</a>
+         </li>
+      </ul>
+         
+      <div class="tab-content">
+         <div class="tab-pane active" id="tradfri-lights">
+             <page-loading-indicator ng-hide="$ctrl.isLoaded"></page-loading-indicator>
+            <devices-table devicetype='Light'></devices-table>
 
-         <td>
-            <ul id="tabs" class="nav nav-tabs sub-tabs" data-tabs="tabs">
-               <li class="active"><a data-target="#zigbee-devices" data-toggle="tab" ng-click="$ctrl.setFilter('Light')">Lights</a></li>
-               <li><a data-target="#zigbee-groups" data-toggle="tab" ng-click="$ctrl.setFilter('Plug')">Plugs</a></li>
-               <li>
-                     <a data-target="#zigbee-map"
-                        data-toggle="tab"
-                        ng-click="$ctrl.setFilter('Group')"
-                     >Group</a>
-               </li>
-            </ul>
-         </td>
+         </div>
 
-         <td style="text-align:right" valign="bottom">
-            <div>Search:
-            <input type="text" id="tradfri-key" style="width: 250px; padding: .2em;" class="text ui-widget-content ui-corner-all" ng-model="$ctrl.search">
-            </div>
-         </td>
-      </tr>
-   <table>
-      
-   <table>
-      <tr ng-repeat="device in filteredItems = ( $ctrl.data | filter: {DeviceType: $ctrl.devicetype} | filter: $ctrl.search )"><td>{{device.DeviceType}}</td><td>{{device.DeviceID}}</td><td>{{device.Name}}</td></tr>
-   
-      <tr ng-hide="filteredItems.length"><td>No items found</td></tr>
+         <div class="tab-pane" id="tradfri-plugs">
+            <page-loading-indicator ng-hide="$ctrl.zigbeeDevices"></page-loading-indicator>
+            
+         </div>
 
-   </table>
+         <div class="tab-pane" id="tradfri-groups">
+            <page-loading-indicator ng-hide="$ctrl.zigbeeDevices"></page-loading-indicator>
+         </div>
+      </div>
+   </div>   
 </script>
 
 <script type="text/ng-template" id="app/tradfri/test.html">

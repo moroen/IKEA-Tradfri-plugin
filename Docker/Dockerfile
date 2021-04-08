@@ -28,7 +28,7 @@ COPY --from=builder /opt/domoticz /opt/domoticz
 COPY --from=builder /usr/local/lib/python3.8/dist-packages /usr/local/lib/python3.8/dist-packages
 COPY --from=builder /usr/lib/python3/dist-packages /usr/lib/python3/dist-packages
 
-RUN apt update && apt install -y libssl1.1 libcurl4 python3 python3-dev libmosquitto-dev libusb-0.1-4 libcurl4-gnutls-dev
+RUN apt update && apt install -y libssl1.1 libcurl4 python3 python3-dev libmosquitto-dev libusb-0.1-4 libcurl4-gnutls-dev curl systemd
 
 EXPOSE 8080
 EXPOSE 8085

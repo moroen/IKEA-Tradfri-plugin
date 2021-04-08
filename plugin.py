@@ -70,6 +70,8 @@ _use_local_tradfricoap = os.path.isdir(
     "{}/tradfricoap".format(os.path.dirname(os.path.realpath(__file__)))
 )
 
+_development = os.path.exists("{}/development".format(os.path.dirname(os.path.realpath(__file__))))
+
 if _use_local_tradfricoap:
     # Check if local tradfricoap is usable
     print("Using local")
@@ -141,7 +143,8 @@ if __name__ == "__main__":
                 print(_version)
             else:
                 print("IKEA Tradfri Plugin: {}".format(_version))
-                process_args(args)
+        
+        process_args(args)
     except ApiNotFoundError as e:
         print("Error: {}".format(e.message))
     exit()
@@ -241,20 +244,26 @@ class BasePlugin:
 
     def install_templates(self):
         Domoticz.Log("Installing custom pages")
-        source_path = Parameters['HomeFolder'] + 'templates/'
-        templates_path = Parameters['StartupFolder'] + 'www/templates/'
-        for aFile in self.templates:
-            # Domoticz.Log("Copy file {} to {}".format(source_path+aFile, templates_path))
-            copy2(source_path + aFile, templates_path)
+        if not _development:
+            source_path = Parameters['HomeFolder'] + 'templates/'
+            templates_path = Parameters['StartupFolder'] + 'www/templates/'
+            for aFile in self.templates:
+                # Domoticz.Log("Copy file {} to {}".format(source_path+aFile, templates_path))
+                copy2(source_path + aFile, templates_path)
+        else:
+            Domoticz.Log("Developement mode set, skipping templates copy")
 
     def uninstall_templates(self):
         templates_path = Parameters['StartupFolder'] + 'www/templates/'
         
         Domoticz.Log("Removing custom pages")
 
-        for aFile in self.templates:   
-            if (os.path.exists(templates_path + aFile)):
-                os.remove(templates_path + aFile)
+        if not _development:
+            for aFile in self.templates:   
+                if (os.path.exists(templates_path + aFile)):
+                    os.remove(templates_path + aFile)
+        else:
+            Domoticz.Log("Developement mode set, skipping templates remove")
 
     def indexRegisteredDevices(self):
 
@@ -703,7 +712,6 @@ class BasePlugin:
         Connection.Send(
             {
                 "Status": str(ret_val.status),
-                "StatusText": "Testing",
                 "Headers": {
                     "Connection": "keep-alive",
                     "Content-Type": ret_val.content_type,
@@ -852,6 +860,7 @@ class BasePlugin:
 
         if _globalError is None:
             close_connection()
+            # pass
 
 
 global _plugin

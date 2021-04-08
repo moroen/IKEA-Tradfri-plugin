@@ -38,7 +38,7 @@ ENDIF(Build_arm/v7)
 string (REPLACE ";" "," platform "${platform}")
 
 
-message(STATUS "platform='${platform}'")
+message(STATUS "Platform='${platform}'")
 
 IF(Push_to_Hub)
     set(BUILD_TARGET --push)
@@ -56,7 +56,7 @@ set(Tradfri_Version "latest" CACHE STRING "Version tag to use")
 set_property(CACHE Tradfri_Version PROPERTY STRINGS latest dev)
 
 set(Domoticz_Version "stable" CACHE STRING "Version of Domoticz to use")
-set_property(CACHE Domoticz_Version PROPERTY STRINGS stable beta)
+set_property(CACHE Domoticz_Version PROPERTY STRINGS stable beta source)
  
 set(Tradfricoap_Version "master" CACHE STRING "Branch of tradfricoap to use")
 set_property(CACHE Tradfricoap_Version PROPERTY STRINGS master development)
@@ -70,19 +70,28 @@ IF(Tradfri_Version STREQUAL "dev")
     set(Tradfri_Version_Number "${Tradfri_Version_Number}-dev")
 ENDIF()
 
-message(STATUS "Tradfri version='${Tradfri_Version_Number}'")
-
-message(STATUS "Build targed='${BUILD_TARGET}'")
-
 IF(Domoticz_Version STREQUAL "stable")
     set(Domoticz_Channel release)
+    set(Dockerfile Dockerfile)
 ELSEIF(Domoticz_Version STREQUAL "beta")
     set(Domoticz_Channel beta)
+    set(Dockerfile Dockerfile)
+ELSEIF(Domoticz_Version STREQUAL "source")
+    set(Domoticz_Channel beta)
+    set(Dockerfile Dockerfile.compile)
 ENDIF()
+
+message(STATUS "Tradfri version='${Tradfri_Version_Number}'")
+
+message(STATUS "Build target='${BUILD_TARGET}'")
+
+message(STATUS "Domoticz version='${Domoticz_Version}'")
+
+message(STATUS "Dockerfile='${Dockerfile}'")
 
 add_custom_target(tradfri
     ALL
-    COMMAND ${Docker_EXECUTABLE} buildx build ${BUILD_CACHE} ${BUILD_TARGET} --platform=${platform} --build-arg DOMOTICZ_VERSION=${Domoticz_Version} --build-arg TRADFRICOAP_VERSION=${Tradfricoap_Version} --build-arg PY3COAP_VERSION=${Py3coap_Version} -t moroen/domoticz-tradfri:${Tradfri_Version_Number} -t moroen/domoticz-tradfri:${Tradfri_Version} -f Dockerfile ..    
+    COMMAND ${Docker_EXECUTABLE} buildx build ${BUILD_CACHE} ${BUILD_TARGET} --platform=${platform} --build-arg DOMOTICZ_VERSION=${Domoticz_Version} --build-arg TRADFRICOAP_VERSION=${Tradfricoap_Version} --build-arg PY3COAP_VERSION=${Py3coap_Version} -t moroen/domoticz-tradfri:${Tradfri_Version_Number} -t moroen/domoticz-tradfri:${Tradfri_Version} -f ${Dockerfile} ..    
 )
 
 add_custom_target(domoticz
