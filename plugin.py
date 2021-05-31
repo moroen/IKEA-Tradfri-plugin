@@ -8,7 +8,7 @@
 #
 
 """
-<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.6" author="moroen" version="0.10.6" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
+<plugin key="IKEA-Tradfri" name="IKEA Tradfri Plugin - version 0.10.7" author="moroen" version="0.10.7" externallink="https://github.com/moroen/IKEA-Tradfri-plugin">
     <description>
         <h2>IKEA Tradfri</h2><br/>
     </description>
@@ -59,7 +59,7 @@ site.main()
 
 _globalError = None
 
-_version = "0.10.6"
+_version = "0.10.7"
 
 _use_local_tradfricoap = False
 
