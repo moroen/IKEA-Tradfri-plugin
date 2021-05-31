@@ -45,8 +45,8 @@
     </params>
 </plugin>
 """
-import traceback
-import os, platform
+
+import os, platform, math
 import json
 import site
 import sys
@@ -280,7 +280,7 @@ class BasePlugin:
                 # Dimmer
                 if ikea_device.Level is not None:
                     if override_level is None:
-                        level = str(int(100 * (int(ikea_device.Level) / 255)))
+                        level = str(int(round_half_up(ikea_device.Level / 2.54)))
                     else:
                         level = override_level
 
@@ -288,7 +288,7 @@ class BasePlugin:
                         Devices[Unit].sValue != str(level)
                     ):
                         Devices[Unit].Update(
-                            nValue=ikea_device.State, sValue=str(level)
+                            nValue=2 if ikea_device.State else 0, sValue=str(level)
                         )
 
             elif Devices[Unit].SwitchType == 13:
@@ -684,7 +684,9 @@ class BasePlugin:
                         self.tradfri_devices[devID].Level = Level
                         self.devicesMoving.append(Unit)
                     else:
-                        self.tradfri_devices[devID].Level = int(Level * 2.54)
+                        self.tradfri_devices[devID].Level = int(
+                            round_half_up((Level * 2.54))
+                        )
 
                 if self.tradfri_devices[devID].Type == "Group":
                     self.updateDevice(Unit, override_level=Level)
@@ -814,6 +816,9 @@ def onHeartbeat():
 #
 # Generic helper functions
 #
+def round_half_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.floor(n * multiplier + 0.5) / multiplier
 
 
 def DumpConfigToLog():
