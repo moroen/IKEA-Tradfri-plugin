@@ -153,7 +153,7 @@ if __name__ == "__main__":
 ## Domoticz Plugin
 import Domoticz
 
-from shutil import copy2
+from shutil import copy2, SameFileError
 
 if _globalError is None:
 
@@ -247,9 +247,13 @@ class BasePlugin:
         if not _development:
             source_path = Parameters['HomeFolder'] + 'templates/'
             templates_path = Parameters['StartupFolder'] + 'www/templates/'
-            for aFile in self.templates:
-                # Domoticz.Log("Copy file {} to {}".format(source_path+aFile, templates_path))
-                copy2(source_path + aFile, templates_path)
+            try: 
+                for aFile in self.templates:
+                    Domoticz.Log("Copy file {} to {}".format(source_path+aFile, templates_path))
+                    copy2(source_path + aFile, templates_path)
+            except SameFileError:
+                self.uninstall_templates()
+                self.install_templates()       
         else:
             Domoticz.Log("Developement mode set, skipping templates copy")
 
